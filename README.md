@@ -1,6 +1,6 @@
 # 🛡️ Civic Asset Recovery Network (CARN) — Premium P2P Edition
 
-Welcome to CARN, the next-generation premium iteration of the Civic Asset Recovery Network. This version introduces **Strict Peer-to-Peer Privacy Firewalls**, a fully **Decentralized Proof-of-Authority (PoA) Ledger**, and a **Local Ollama LLM Cognitive Auditing Engine** powered exclusively by the `llama3.2:1b` model.
+Welcome to **CARN**, the next-generation premium iteration of the Civic Asset Recovery Network. This version introduces **Strict Peer-to-Peer Privacy Firewalls**, a fully **Decentralized Proof-of-Authority (PoA) Ledger**, and a **Local Ollama LLM Cognitive Auditing Engine** powered exclusively by the `llama3.2:1b` model.
 
 ---
 
@@ -98,4 +98,4 @@ c:\Hackathon\carn 2\
 └── README.md       # Full project handbook (This file)
 ```
 
-Developed as part of the **Civic Asset Recovery Network 2** project. Security, privacy, and local cognitive intelligence, unified.
+Developed as part of the **Civic Asset Recovery Network ** project. Security, privacy, and local cognitive intelligence, unified.
