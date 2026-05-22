@@ -963,3 +963,940 @@
     </div>
   </div>
 </div>
+
+<div class="modal-bg" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="reportTitle">Report Item</div>
+      <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+    </div>
+    <div class="tabs" style="margin-bottom:1rem">
+      <button class="tab active" id="tabLost" onclick="switchReportType('lost')">🔴 Lost Item</button>
+      <button class="tab" id="tabFound" onclick="switchReportType('found')">🟢 Found Item</button>
+    </div>
+    <div class="form-card" style="padding:0;background:none;border:none">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Item Name *</label>
+          <input type="text" id="itemName" placeholder="e.g. Blue Wallet" />
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="itemCat">
+            <option>Electronics</option><option>Bags &amp; Wallets</option><option>Keys</option>
+            <option>Clothing</option><option>Jewellery</option><option>Documents</option>
+            <option>Pets</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="itemDate" />
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="itemLoc" placeholder="e.g. Central Park" />
+        </div>
+        <div class="form-group full">
+          <label>Description</label>
+          <textarea id="itemDesc" placeholder="Colour, brand, special marks…"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Upload Photo</label>
+          <div class="upload-zone" id="uploadZoneContainer" onclick="simulateUpload()">
+            <div class="upload-icon" id="uploadIcon">📷</div>
+            <div class="upload-label" id="uploadLabel">Click to upload image</div>
+            <div class="progress-bar" id="uploadBar" style="display:none"><div class="progress-fill" id="uploadFill" style="width:0%"></div></div>
+          </div>
+          <button class="btn btn-outline" id="edgeAiBtn" style="display:none; width:100%; margin-top:10px;" onclick="runEdgeAI()">🧠 Run Edge AI Analysis</button>
+        </div>
+        <div class="form-group full" id="aiMatchPanel" style="display:none">
+          <div class="ai-panel">
+            <div class="ai-badge"><div class="pulse"></div> TensorFlow.js Edge Model</div>
+            <div id="aiMatchResult" style="font-size:14px;margin-top:6px">Extracting visual features on-device...</div>
+            <div id="aiTagsContainer" style="margin-top:10px;"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Contact Email</label>
+          <input type="email" id="itemEmail" placeholder="your@email.com" />
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;gap:0.75rem">
+        <button class="btn btn-primary" style="flex:1" onclick="submitReport()">Submit Report</button>
+        <button class="btn btn-outline" onclick="closeModal('reportModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dynamicMatchModal" style="z-index: 3000;">
+  <div class="modal" style="max-width: 450px; border: 2px solid var(--accent); background: linear-gradient(180deg, var(--card) 0%, #0d1a14 100%);">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--accent)" id="matchModalTitle">🎉 High Probability Match!</div>
+      <button class="modal-close" onclick="closeModal('dynamicMatchModal')">✕</button>
+    </div>
+    <div id="dynamicMatchContent" style="text-align: left;">
+      </div>
+    <div id="dynamicMatchActions" style="margin-top: 1rem;">
+      </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="claimModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Secure Claim Questionnaire</div>
+      <button class="modal-close" onclick="closeModal('claimModal')">✕</button>
+    </div>
+    <div id="claimContent"></div>
+  </div>
+</div>
+
+<!-- NEW LOCATION PROMPT MODAL -->
+<div class="modal-bg" id="locationPromptModal" style="z-index: 4000;">
+  <div class="modal" style="max-width: 450px;">
+    <div class="modal-header">
+      <div class="modal-title" id="locPromptTitle">📍 Setup Meetup Route</div>
+      <button class="modal-close" onclick="closeModal('locationPromptModal')">✕</button>
+    </div>
+    <div style="margin-bottom: 1.2rem; color: var(--muted); font-size: 13.5px; line-height: 1.5;">
+      <div style="background: rgba(0, 200, 150, 0.08); border: 1px solid var(--accent); border-radius: 8px; padding: 10px; color: var(--text); margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-start;">
+        <span style="font-size: 1.2rem; line-height: 1;">🛡️</span>
+        <span><strong>Secure Privacy Firewall:</strong> Your exact starting location is never shared with the other party. The network only computes the optimal secure <strong>Civic Midpoint Drop Point</strong> based on both locations, keeping home addresses private.</span>
+      </div>
+    </div>
+    <input type="hidden" id="locPromptPairId" />
+    
+    <!-- Dynamic Single User Input -->
+    <div class="form-group" style="margin-bottom: 1.2rem;">
+      <label id="userLocInputLabel">Your Starting Location *</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="userLocInput" placeholder="e.g. My Current Office / Mall" style="flex: 1;" />
+        <button class="btn btn-outline" id="gpsBtn" onclick="getUserGPSLocation()" style="padding: 0 12px; font-size: 13px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">📍 Use GPS</button>
+      </div>
+      <div id="gpsStatus" style="font-size: 11px; color: var(--accent); margin-top: 4px; display: none;"></div>
+    </div>
+
+    <!-- Collapsible Simulator Box for cross-tab or single-user testing -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 1.5rem;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="const el = document.getElementById('simulatorFields'); el.style.display = el.style.display === 'none' ? 'block' : 'none'">
+        <span>⚙️ Simulator Coordinates (For Demo)</span>
+        <span style="color: var(--accent); font-weight: bold;">[Toggle]</span>
+      </div>
+      <div id="simulatorFields" style="display: none; margin-top: 8px;">
+        <p style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">Since this is a simulated sandbox, you can adjust the other party's starting location here to test the midpoint routing live:</p>
+        <div class="form-group">
+          <label id="otherLocInputLabel">Other Party's Starting Location</label>
+          <input type="text" id="otherLocInput" placeholder="e.g. Fun Mall" />
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%" onclick="submitCustomLocations()">Generate Secure Route</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="quorumModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Consensus Node Review</div>
+      <button class="modal-close" onclick="closeModal('quorumModal')">✕</button>
+    </div>
+    <div id="quorumContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── MULTI-TAB SYNC & DB STATE ────────────────────────────────────────────
+function isSamePhone(p1, p2) {
+  if (!p1 || !p2) return false;
+  const s1 = String(p1);
+  const s2 = String(p2);
+  const c1 = s1.replace(/\D/g, '');
+  const c2 = s2.replace(/\D/g, '');
+  if (c1.length >= 10 && c2.length >= 10) {
+    return c1.slice(-10) === c2.slice(-10); // Match last 10 digits
+  }
+  return c1 === c2;
+}
+
+function saveData() {
+  localStorage.setItem('carn_users', JSON.stringify(usersDB));
+  localStorage.setItem('carn_items', JSON.stringify(items));
+  localStorage.setItem('carn_matches', JSON.stringify(matchPairs));
+  localStorage.setItem('carn_blocks', JSON.stringify(ledgerBlocks));
+  if(currentUser) sessionStorage.setItem('carn_currentUser', JSON.stringify(currentUser));
+  else sessionStorage.removeItem('carn_currentUser');
+}
+
+let usersDB = JSON.parse(localStorage.getItem('carn_users')) || [];
+let currentUser = JSON.parse(sessionStorage.getItem('carn_currentUser')) || null; 
+let items = JSON.parse(localStorage.getItem('carn_items')) || [];
+let matchPairs = JSON.parse(localStorage.getItem('carn_matches')) || [];
+let ledgerBlocks = JSON.parse(localStorage.getItem('carn_blocks')) || [];
+
+// Storage listener for cross-tab sync
+window.addEventListener('storage', function(e) {
+  const oldPairs = JSON.stringify(matchPairs);
+  usersDB = JSON.parse(localStorage.getItem('carn_users')) || [];
+  items = JSON.parse(localStorage.getItem('carn_items')) || [];
+  matchPairs = JSON.parse(localStorage.getItem('carn_matches')) || [];
+  ledgerBlocks = JSON.parse(localStorage.getItem('carn_blocks')) || [];
+  
+  if(currentUser) {
+     const oldPairsParsed = JSON.parse(oldPairs || '[]');
+     matchPairs.forEach(p => {
+         const wasOld = oldPairsParsed.find(op => op.id === p.id);
+         if(!wasOld && p.status === 'pending_claim') {
+             if(isSamePhone(p.lostReporterPhone, currentUser.phone)) {
+                 const fItem = items.find(i=>i.id === p.foundId);
+                 if(fItem) showPendingClaimModal(p, fItem);
+             } else if(isSamePhone(p.foundReporterPhone, currentUser.phone)) {
+                 const lItem = items.find(i=>i.id === p.lostId);
+                 if(lItem) showFinderWaitModal(p, lItem);
+             }
+         }
+         if(wasOld && wasOld.status !== 'verified' && p.status === 'verified') {
+             if(isSamePhone(p.lostReporterPhone, currentUser.phone) || isSamePhone(p.foundReporterPhone, currentUser.phone)) {
+                 showVerifiedMatchModal(p);
+             }
+         }
+     });
+  }
+  
+  animateStats();
+  renderRecent();
+  if(document.getElementById('browse').classList.contains('active')) renderBrowse();
+  if(document.getElementById('verify').classList.contains('active')) renderVerify();
+  if(document.getElementById('map-page').classList.contains('active') && typeof showAllPins === 'function') {
+      showAllPins();
+      populateMatchSelect();
+  }
+});
+
+let currentType = 'lost';
+let mapInstance = null;
+let browseTab = 'all';
+let uploadDone = false;
+let routeLayerGroup = null;
+let allMarkersGroup = null;
+let edgeAITags = [];
+let pendingMatchPairIdToView = null;
+
+const emojis = { Electronics:'📱', 'Bags & Wallets':'👜', Keys:'🔑', Clothing:'👕', Jewellery:'💎', Documents:'📄', Pets:'🐾', Other:'📦' };
+
+// ─── UTILS / NOTIFICATIONS ──────────────────────────────────────────────────
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast show ' + type;
+  setTimeout(() => toast.className = 'toast', 3000);
+}
+
+// ─── LOGIN & OTP AUTHENTICATION ────────────────────────────────────────────
+function sendOTP() {
+  const name = document.getElementById('loginName').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  if(!name || !phone) { showToast('Please enter both Name and Phone number', 'error'); return; }
+  
+  document.getElementById('displayPhone').textContent = phone;
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'block';
+  setTimeout(()=> document.getElementById('otp1').focus(), 100);
+}
+
+function moveNext(curr, nextId) {
+  if(curr.value.length >= 1) { document.getElementById(nextId).focus(); }
+}
+
+function verifyOTP() {
+  // Prevent verification if full OTP is not provided
+  const o1 = document.getElementById('otp1').value;
+  const o2 = document.getElementById('otp2').value;
+  const o3 = document.getElementById('otp3').value;
+  const o4 = document.getElementById('otp4').value;
+  
+  if (!o1 || !o2 || !o3 || !o4) {
+    showToast('Please enter the full 4-digit OTP', 'warning');
+    return;
+  }
+
+  const name = document.getElementById('loginName').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  
+  // Extra safeguard
+  if(!name || !phone) { 
+     showToast('Session expired. Try again.', 'error');
+     resetLogin();
+     return; 
+  }
+  
+  // Database check for exact phone match
+  let existingUser = usersDB.find(u => isSamePhone(u.phone, phone));
+  
+  if (existingUser) {
+    currentUser = existingUser;
+    showToast(`✅ Welcome back, ${currentUser.name}!`, 'success');
+  } else {
+    currentUser = { name, phone };
+    usersDB.push(currentUser);
+    showToast(`✅ New Account created! Logged in as ${currentUser.name}.`, 'success');
+  }
+  saveData();
+
+  // Update Navbar UI
+  document.getElementById('loginBtn').style.display = 'none';
+  document.getElementById('userNavGroup').classList.add('active');
+  document.getElementById('navUserName').textContent = currentUser.name;
+  
+  closeModal('loginModal');
+  goPage('home'); // Refresh view
+}
+
+function logout() {
+  currentUser = null;
+  saveData();
+  document.getElementById('loginBtn').style.display = 'inline-block';
+  document.getElementById('userNavGroup').classList.remove('active');
+  showToast('🚪 Logged out successfully.', 'info');
+  goPage('home');
+}
+
+function clearDatabase() {
+  localStorage.removeItem('carn_users');
+  localStorage.removeItem('carn_items');
+  localStorage.removeItem('carn_matches');
+  localStorage.removeItem('carn_blocks');
+  sessionStorage.removeItem('carn_currentUser');
+  usersDB = [];
+  currentUser = null;
+  items = [];
+  matchPairs = [];
+  ledgerBlocks = [];
+  
+  // Reset UI
+  document.getElementById('loginBtn').style.display = 'inline-block';
+  document.getElementById('userNavGroup').classList.remove('active');
+  
+  // Re-render views
+  animateStats();
+  renderRecent();
+  if(document.getElementById('browse').classList.contains('active')) renderBrowse();
+  if(document.getElementById('verify').classList.contains('active')) renderVerify();
+  if(document.getElementById('map-page').classList.contains('active') && typeof showAllPins === 'function') {
+      showAllPins();
+      populateMatchSelect();
+  }
+  
+  showToast('🧹 Local database cleared! Re-seeding baseline...', 'success');
+  setTimeout(() => {
+    location.reload();
+  }, 1000);
+}
+
+function seedDemoData() {
+  localStorage.removeItem('carn_users');
+  localStorage.removeItem('carn_items');
+  localStorage.removeItem('carn_matches');
+  localStorage.removeItem('carn_blocks');
+  sessionStorage.removeItem('carn_currentUser');
+  currentUser = null;
+
+  usersDB = [
+    { name: 'Aravind Swamy', phone: '+91 98765 43210' },
+    { name: 'Rajesh Kumar', phone: '+91 87654 32109' },
+    { name: 'Meera Krishnan', phone: '+91 76543 21098' },
+    { name: 'Suresh Raina', phone: '+91 65432 10987' }
+  ];
+
+  items = [
+    {
+      id: 99101,
+      type: 'lost',
+      name: 'iPhone 14 Pro',
+      cat: 'Electronics',
+      loc: 'Adyar, Chennai',
+      lat: 13.0012,
+      lng: 80.2565,
+      date: '2026-05-20',
+      desc: 'Pink case, cracked back, space black colour',
+      reporterName: 'Aravind Swamy',
+      reporterPhone: '+91 98765 43210',
+      score: 92,
+      aiTags: ['#smartphone', '#iphone', '#black']
+    },
+    {
+      id: 99102,
+      type: 'found',
+      name: 'Black Smartphone',
+      cat: 'Electronics',
+      loc: 'Velachery, Chennai',
+      lat: 12.9820,
+      lng: 80.2195,
+      date: '2026-05-20',
+      desc: 'Dark black phone found on street, cracked screen',
+      reporterName: 'Rajesh Kumar',
+      reporterPhone: '+91 87654 32109',
+      score: 92,
+      aiTags: ['#electronics', '#smartphone', '#black']
+    },
+    {
+      id: 99201,
+      type: 'lost',
+      name: 'Golden Retriever',
+      cat: 'Pets',
+      loc: 'Anna Nagar, Chennai',
+      lat: 13.0820,
+      lng: 80.2090,
+      date: '2026-05-19',
+      desc: 'Friendly golden dog, answers to Leo, wearing red collar',
+      reporterName: 'Meera Krishnan',
+      reporterPhone: '+91 76543 21098',
+      score: 72,
+      aiTags: ['#dog', '#golden', '#collar']
+    },
+    {
+      id: 99202,
+      type: 'found',
+      name: 'Light Brown Dog',
+      cat: 'Pets',
+      loc: 'T.Nagar, Chennai',
+      lat: 13.0418,
+      lng: 80.2341,
+      date: '2026-05-20',
+      desc: 'Young playful dog, looks like golden retriever, no tags but very friendly',
+      reporterName: 'Suresh Raina',
+      reporterPhone: '+91 65432 10987',
+      score: 72,
+      aiTags: ['#dog', '#retriever', '#friendly']
+    }
+  ];
+
+  matchPairs = [
+    {
+      id: 'MP-992',
+      score: 72,
+      label: 'Golden Retriever ↔ Light Brown Dog',
+      lostId: 99201,
+      foundId: 99202,
+      status: 'pending_claim',
+      lostReporterPhone: '+91 76543 21098',
+      foundReporterPhone: '+91 65432 10987',
+      lostVerified: false,
+      foundVerified: false,
+      civic: { name: 'T.Nagar Civic Hub', addr: '2nd Main Rd, T.Nagar, Chennai', lat: 13.0418, lng: 80.2341 },
+      steps: [
+        'Meera Krishnan (Owner) coordinates meeting at T.Nagar Civic Hub.',
+        'Suresh Raina (Finder) brings dog to T.Nagar Civic Hub.',
+        'Verify red collar residue or dog responds to "Leo".',
+        'Complete secure verification.'
+      ]
+    }
+  ];
+
+  ledgerBlocks = [
+    {
+      num: '#1041',
+      tx: 'GENESIS BLOCK',
+      hash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+      timestamp: 'May 18, 2026, 10:00 AM'
+    }
+  ];
+
+  saveData();
+
+  // Reset UI
+  document.getElementById('loginBtn').style.display = 'inline-block';
+  document.getElementById('userNavGroup').classList.remove('active');
+
+  animateStats();
+  renderRecent();
+  if(document.getElementById('browse').classList.contains('active')) renderBrowse();
+  if(document.getElementById('verify').classList.contains('active')) renderVerify();
+  if(document.getElementById('map-page').classList.contains('active') && typeof showAllPins === 'function') {
+      showAllPins();
+      populateMatchSelect();
+  }
+
+  showToast('✨ Baseline demo sandbox seeded successfully!', 'success');
+  goPage('home');
+}
+
+function resetLogin() {
+  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginPhone').value = '';
+  document.querySelectorAll('.otp-input').forEach(i => i.value = '');
+}
+
+function handleReportClick(type) {
+  if (!currentUser) {
+    showToast('🔒 Please Login to report an item.', 'warning');
+    openModal('loginModal');
+  } else {
+    openModal('reportModal', type);
+  }
+}
+
+// ─── PAGE NAVIGATION ───────────────────────────────────────────────────────
+function goPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  const pageId = p === 'map' ? 'map-page' : p;
+  document.getElementById(pageId).classList.add('active');
+  const navLabel = { home:'home', browse:'browse', map:'live map', verify:'verify', notifs:'alert', fusion:'fusion' };
+  const btn = [...document.querySelectorAll('.nav-btn')].find(b => b.textContent.toLowerCase().includes(navLabel[p]||p));
+  if(btn) btn.classList.add('active');
+  if(p === 'map') initMap();
+  if(p === 'browse') renderBrowse();
+  if(p === 'verify') renderVerify();
+  if(p === 'notifs') renderNotifs();
+  if(p === 'fusion') renderFusionPage();
+  if(p === 'home') { animateStats(); renderRecent(); }
+}
+
+// ─── STATS ANIMATION ──────────────────────────────────────────────────────
+function animateStats() {
+  const total = items.length;
+  // Count matches based on matchPairs array size (each pair counts as 2 matched items)
+  const matched = matchPairs.length * 2;
+  const rate = total > 0 ? Math.round((matched/total)*100) : 0;
+  
+  document.getElementById('s1').textContent = total;
+  document.getElementById('s2').textContent = matchPairs.length;
+  document.getElementById('s3').textContent = matchPairs.filter(p=>p.status==='verified').length;
+  document.getElementById('s4').textContent = rate + '%';
+}
+
+// ─── RENDER RECENT ─────────────────────────────────────────────────────────
+function renderRecent() {
+  if (items.length === 0) {
+    document.getElementById('recentCards').innerHTML = '<p style="color:var(--muted)">No items reported yet. Be the first to report an item!</p>';
+    return;
+  }
+  document.getElementById('recentCards').innerHTML = items.slice(0,4).map(cardHTML).join('');
+}
+
+function cardHTML(item) {
+  const tagCls = { lost:'tag-lost', found:'tag-found', matched:'tag-matched' }[item.type];
+  const tagLabel = { lost:'Lost', found:'Found', matched:'Matched ✓' }[item.type];
+  const bar = item.score > 0 ? `<div class="match-score"><span style="color:var(--muted)">Match</span><div class="match-bar"><div class="match-bar-fill" style="width:${item.score}%;background:${item.score>85?'var(--accent)':item.score>60?'var(--warning)':'var(--danger)'}"></div></div><span style="color:var(--accent)">${item.score}%</span></div>` : '';
+  const aiTagsRender = (item.aiTags || []).map(t => `<span class="tag tag-ai">${t}</span>`).join('');
+  
+  // Check if this item is part of a match pair
+  const pair = matchPairs.find(p => p.lostId === item.id || p.foundId === item.id);
+  let actionBtn = '';
+  
+  if (pair) {
+    if (pair.status === 'pending_claim') {
+      if (currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone)) {
+        actionBtn = `<button class="btn btn-warning" style="margin-top:8px;font-size:12px;padding:5px 12px;width:100%" onclick="event.stopPropagation();openClaim(${pair.lostId})">❗ Verify Claim to Unlock</button>`;
+      } else if (currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone)) {
+        actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--warning);background:rgba(255,184,74,0.1);padding:5px;border-radius:6px;text-align:center">⏳ Waiting for Owner to Verify</div>`;
+      } else {
+        actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:rgba(255,255,255,0.05);padding:5px;border-radius:6px;text-align:center">🔒 Private Match Found</div>`;
+      }
+    } else if (pair.status === 'pending_verification') {
+      const isOwner = currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone);
+      const isFinder = currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone);
+      
+      if (isOwner) {
+        if (!pair.lostVerified) {
+          actionBtn = `<button class="btn btn-warning" style="margin-top:8px;font-size:12px;padding:5px 12px;width:100%" onclick="event.stopPropagation(); goPage('verify'); setTimeout(() => openQuorumReview('${pair.id}'), 400);">🗳️ Review & Sign Verification</button>`;
+        } else {
+          actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--warning);background:rgba(255,184,74,0.1);padding:5px;border-radius:6px;text-align:center">⏳ Awaiting Finder's Verification Signature</div>`;
+        }
+      } else if (isFinder) {
+        if (!pair.foundVerified) {
+          actionBtn = `<button class="btn btn-warning" style="margin-top:8px;font-size:12px;padding:5px 12px;width:100%" onclick="event.stopPropagation(); goPage('verify'); setTimeout(() => openQuorumReview('${pair.id}'), 400);">🗳️ Review & Sign Verification</button>`;
+        } else {
+          actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--warning);background:rgba(255,184,74,0.1);padding:5px;border-radius:6px;text-align:center">⏳ Awaiting Owner's Verification Signature</div>`;
+        }
+      } else {
+        actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:rgba(255,255,255,0.05);padding:5px;border-radius:6px;text-align:center">🔒 Match Verification in Progress</div>`;
+      }
+    } else if (pair.status === 'verified') {
+      if (currentUser && (isSamePhone(currentUser.phone, pair.lostReporterPhone) || isSamePhone(currentUser.phone, pair.foundReporterPhone))) {
+        actionBtn = `<button class="btn btn-outline" style="margin-top:8px;font-size:12px;padding:5px 12px;width:100%" onclick="event.stopPropagation();viewRoute('${pair.id}')">🗺 View Route & Contact</button>`;
+      } else {
+        actionBtn = `<div style="margin-top:8px;font-size:12px;color:var(--accent);background:rgba(0,200,150,0.1);padding:5px;border-radius:6px;text-align:center">✅ Match Resolved & Verified</div>`;
+      }
+    }
+  }
+
+  return `<div class="item-card">
+    <div class="item-card-img">${emojis[item.cat]||'📦'}</div>
+    <div class="item-card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="item-card-title">${item.name}</div>
+        <span class="tag ${tagCls}">${tagLabel}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">${item.desc.slice(0,60)}…</div>
+      <div class="item-card-meta"><span>📍 ${item.loc}</span><span style="color:var(--info)">👤 By ${item.reporterName}</span></div>
+      ${aiTagsRender ? `<div style="margin-top:6px">${aiTagsRender}</div>` : ''}
+      ${bar}
+      ${actionBtn}
+    </div>
+  </div>`;
+}
+
+function viewRoute(pairId) {
+  const pair = matchPairs.find(p => p.id === pairId);
+  if(!pair || pair.status !== 'verified') { showToast('Route locked until claim is verified','error'); return; }
+  if(!currentUser || (!isSamePhone(pair.lostReporterPhone, currentUser.phone) && !isSamePhone(pair.foundReporterPhone, currentUser.phone))) {
+    showToast('Unauthorized: This route belongs to another user.','error');
+    return;
+  }
+  goPage('map');
+  setTimeout(() => {
+    document.getElementById('matchPairSelect').value = pair.id;
+    loadMatchRoute();
+  }, 400);
+}
+
+// ─── BROWSE ────────────────────────────────────────────────────────────────
+function renderBrowse() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const ft = document.getElementById('filterType').value;
+  const fc = document.getElementById('filterCat').value;
+  let list = items.filter(i =>
+    (!q || i.name.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q)) &&
+    (!ft || i.type === ft) &&
+    (!fc || i.cat === fc)
+  );
+  if(browseTab === 'high') list = list.filter(i => i.score >= 80);
+  if(browseTab === 'new') list = [...list].reverse();
+  document.getElementById('browseGrid').innerHTML = list.length ? list.map(cardHTML).join('') : '<p style="color:var(--muted)">No items found.</p>';
+}
+function setTab(btn, tab) { document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active')); btn.classList.add('active'); browseTab = tab; renderBrowse(); }
+
+// ─── MAP ──────────────────────────────────────────────────────────────────
+function initMap() {
+  if(mapInstance) { populateMatchSelect(); return; }
+  mapInstance = L.map('map').setView([13.0500, 80.2300], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(mapInstance);
+  routeLayerGroup = L.layerGroup().addTo(mapInstance);
+  allMarkersGroup = L.layerGroup().addTo(mapInstance);
+  showAllPins();
+  populateMatchSelect();
+}
+
+function showAllPins() {
+  if(!mapInstance) return;
+  if(routeLayerGroup) routeLayerGroup.clearLayers();
+  if(allMarkersGroup) allMarkersGroup.clearLayers();
+
+  const colors = { lost:'#FF6B4A', found:'#00C896', matched:'#4A9EFF' };
+  items.forEach(item => {
+    const dot = L.divIcon({ className:'', html:`<div style="width:16px;height:16px;border-radius:50%;background:${colors[item.type]};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.5)"></div>`, iconSize:[16,16], iconAnchor:[8,8] });
+    L.marker([item.lat, item.lng], {icon:dot}).addTo(allMarkersGroup)
+      .bindPopup(`<b>${item.name}</b><br/><span style="color:gray">${item.loc}</span><br/><span style="font-size:11px;text-transform:uppercase">${item.type}</span>`);
+  });
+
+  const drops = [
+    [13.0827, 80.2707, 'Central Police Station', 'Egmore, Chennai'],
+    [13.0418, 80.2341, 'T.Nagar Civic Hub', '2nd Main Rd, T.Nagar'],
+    [13.0525, 80.2820, 'Marina Civic Point', 'Marina Beach Rd'],
+    [12.9820, 80.2195, 'Velachery Police Station', 'Velachery Main Rd'],
+    [13.0820, 80.2090, 'Anna Nagar Civic Hub', '2nd Avenue, Anna Nagar'],
+  ];
+  drops.forEach(([lat,lng,name,addr]) => {
+    const star = L.divIcon({ className:'', html:`<div style="width:22px;height:22px;border-radius:50%;background:#FFB84A;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.5)">⭐</div>`, iconSize:[22,22], iconAnchor:[11,11] });
+    L.marker([lat,lng],{icon:star}).addTo(allMarkersGroup).bindPopup(`<b>🏛 ${name}</b><br/><span style="color:gray;font-size:12px">${addr}</span><br/><span style="color:#FFB84A;font-size:11px">Civic Drop Point</span>`);
+  });
+  document.getElementById('pairInfo').style.display='none';
+  document.getElementById('matchBadge').style.display='none';
+}
+
+function populateMatchSelect() {
+  const sel = document.getElementById('matchPairSelect');
+  sel.innerHTML = '<option value="">— Pick a verified match pair to track route —</option>';
+  
+  // Only allow routing for VERIFIED claims that are associated with the logged-in user
+  const filtered = matchPairs.filter(p => {
+    if (p.status !== 'verified') return false;
+    if (!currentUser) return false;
+    return isSamePhone(p.lostReporterPhone, currentUser.phone) || isSamePhone(p.foundReporterPhone, currentUser.phone);
+  });
+  
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.label} — ${p.score}% match`;
+    sel.appendChild(opt);
+  });
+}
+
+function loadMatchRoute() {
+  const pairId = document.getElementById('matchPairSelect').value;
+  if(!pairId) { showAllPins(); return; }
+  const pair = matchPairs.find(p => p.id===pairId);
+  if(!pair || !mapInstance) return;
+
+  // Strict Security Firewall: Only authorized participants of this match can view this route
+  if (!currentUser || (!isSamePhone(pair.lostReporterPhone, currentUser.phone) && !isSamePhone(pair.foundReporterPhone, currentUser.phone))) {
+    showToast('Unauthorized: Only the parties involved in this match can view this route.', 'error');
+    clearRoute();
+    return;
+  }
+
+  // Double check that it has been fully verified by both parties
+  if (pair.status !== 'verified') {
+    showToast('Route Locked: Awaiting full verification from both parties.', 'error');
+    clearRoute();
+    return;
+  }
+
+  const lostItem = items.find(i => i.id===pair.lostId);
+  const foundItem = items.find(i => i.id===pair.foundId);
+  if(!lostItem || !foundItem) return;
+
+  routeLayerGroup.clearLayers();
+  allMarkersGroup.clearLayers();
+
+  // Use custom locations if they exist (provided via the location prompt modal)
+  const lostLat = pair.customLostLat || lostItem.lat;
+  const lostLng = pair.customLostLng || lostItem.lng;
+  const foundLat = pair.customFoundLat || foundItem.lat;
+  const foundLng = pair.customFoundLng || foundItem.lng;
+  const lostLocName = pair.customLostLocName || lostItem.loc;
+  const foundLocName = pair.customFoundLocName || foundItem.loc;
+
+  const lostIcon = L.divIcon({ className:'', html:`<div style="background:#FF6B4A;color:white;border:2px solid white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,0.5)">🔴</div>`, iconSize:[30,30], iconAnchor:[15,15] });
+  L.marker([lostLat, lostLng], {icon:lostIcon}).addTo(routeLayerGroup).bindPopup(`<b>🔴 LOST: ${lostItem.name}</b> (👤 ${lostItem.reporterName})<br/>📞 ${lostItem.reporterPhone}<br/><i>Location: ${lostLocName}</i>`).openPopup();
+
+  const foundIcon = L.divIcon({ className:'', html:`<div style="background:#00C896;color:white;border:2px solid white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,0.5)">🟢</div>`, iconSize:[30,30], iconAnchor:[15,15] });
+  L.marker([foundLat, foundLng], {icon:foundIcon}).addTo(routeLayerGroup).bindPopup(`<b>🟢 FOUND: ${foundItem.name}</b> (👤 ${foundItem.reporterName})<br/>📞 ${foundItem.reporterPhone}<br/><i>Location: ${foundLocName}</i>`);
+
+  const civicIcon = L.divIcon({ className:'', html:`<div style="background:#FFB84A;color:#0A0F0D;border:2px solid white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 3px 8px rgba(0,0,0,0.5)">🏛</div>`, iconSize:[32,32], iconAnchor:[16,16] });
+  L.marker([pair.civic.lat, pair.civic.lng], {icon:civicIcon}).addTo(routeLayerGroup).bindPopup(`<b>🏛 Meetup Point</b>`);
+
+  const routeCoords = [[lostLat, lostLng], [pair.civic.lat, pair.civic.lng], [foundLat, foundLng]];
+  L.polyline(routeCoords, { color:'#C084FC', weight:5, opacity:0.25, lineJoin:'round' }).addTo(routeLayerGroup);
+  L.polyline(routeCoords, { color:'#C084FC', weight:3, opacity:0.9, dashArray:'10, 8', lineJoin:'round' }).addTo(routeLayerGroup);
+
+  routeCoords.forEach((coord, i) => {
+    if(i===0 || i===routeCoords.length-1) return;
+    L.circleMarker(coord, { radius:6, color:'#C084FC', fillColor:'#C084FC', fillOpacity:0.9, weight:2 }).addTo(routeLayerGroup);
+  });
+
+  const distKm = haversineKm(lostLat, lostLng, foundLat, foundLng);
+  const midLat = (lostLat + foundLat) / 2;
+  const midLng = (lostLng + foundLng) / 2;
+  const midIcon = L.divIcon({ className:'', html:`<div style="background:rgba(192,132,252,0.9);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${distKm.toFixed(1)} km apart</div>`, iconSize:null, iconAnchor:null });
+  L.marker([midLat, midLng], {icon:midIcon}).addTo(routeLayerGroup);
+
+  mapInstance.fitBounds(L.latLngBounds(routeCoords).pad(0.25));
+
+  document.getElementById('pairInfo').style.display = 'block';
+  document.getElementById('matchBadge').style.display = 'block';
+  document.getElementById('routeLostName').textContent = lostItem.name;
+  document.getElementById('routeLostLoc').textContent = `📍 ${lostLocName} (👤 ${lostItem.reporterName} - 📞 ${lostItem.reporterPhone})`;
+  document.getElementById('routeFoundName').textContent = foundItem.name;
+  document.getElementById('routeFoundLoc').textContent = `📍 ${foundLocName} (👤 ${foundItem.reporterName} - 📞 ${foundItem.reporterPhone})`;
+  
+  const walkMin = Math.round(distKm * 12);
+  const driveMin = Math.round(distKm * 3);
+  document.getElementById('routeStats').innerHTML = `
+    <div class="route-stat"><div class="route-stat-val">${distKm.toFixed(1)} km</div><div class="route-stat-lbl">Total distance</div></div>
+    <div class="route-stat"><div class="route-stat-val">${driveMin} min</div><div class="route-stat-lbl">By auto/car</div></div>
+    <div class="route-stat"><div class="route-stat-val">${walkMin} min</div><div class="route-stat-lbl">Walking</div></div>
+    <div class="route-stat"><div class="route-stat-val" style="color:var(--accent)">${pair.score}%</div><div class="route-stat-lbl">Match confidence</div></div>`;
+
+  document.getElementById('routeSteps').innerHTML = pair.steps.map((s,i) => `<div class="route-step-item"><div class="route-step-num">${i+1}</div><div>${s}</div></div>`).join('');
+  document.getElementById('civicName').textContent = pair.civic.name || 'Generated Midpoint Safehouse';
+  document.getElementById('civicAddr').textContent = pair.civic.addr || 'Coordinated Meeting Location';
+}
+function clearRoute() { document.getElementById('matchPairSelect').value = ''; document.getElementById('pairInfo').style.display = 'none'; document.getElementById('matchBadge').style.display = 'none'; showAllPins(); }
+function haversineKm(lat1, lng1, lat2, lng2) { const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLng = (lng2-lng1)*Math.PI/180; const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2; return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); }
+
+// ─── VERIFY (QUORUM VOTING) ───────────────────────────────────────────────
+// ─── VERIFY (QUORUM VOTING) ───────────────────────────────────────────────
+function renderVerify() {
+  // Update Network Height Metric card
+  if (ledgerBlocks.length > 0) {
+    document.getElementById('metricsBlockHeight').textContent = ledgerBlocks[ledgerBlocks.length - 1].num;
+  }
+
+  // Render Horizontal blockchain scrolling blocks
+  const chainView = document.getElementById('chainView');
+  chainView.innerHTML = ledgerBlocks.map((b, i) => {
+    const arrow = i > 0 ? '<div class="chain-link-connector"></div>' : '';
+    return `${arrow}
+    <div class="chain-block-card" id="block_${b.num.replace('#', '')}">
+      <div class="chain-block-header">
+        <span class="chain-block-num">${b.num}</span>
+        <span style="font-size: 10px; color: var(--muted);">${b.timestamp.split(',')[0]}</span>
+      </div>
+      <div class="chain-block-tx">${b.tx}</div>
+      <div class="chain-block-hash" onclick="navigator.clipboard.writeText('${b.hash}'); showToast('📋 Hash copied to clipboard!', 'success');" title="Click to copy full hash">
+        <span>${b.hash.slice(0, 8)}...${b.hash.slice(-6)}</span>
+        <span style="font-size: 10px;">📋</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Render Pending Quorum Validations Table
+  const colours = { 
+    verified: 'var(--accent)', 
+    pending_verification: 'var(--warning)', 
+    pending_claim: 'var(--info)' 
+  };
+  const labelTexts = {
+    verified: 'Verified & Logged ✓',
+    pending_verification: 'Awaiting Signatures 🗳️',
+    pending_claim: 'Awaiting Questionnaire ⏳'
+  };
+  
+  let tableHtml = '';
+  
+  if (!currentUser) {
+    document.getElementById('quorumTableWrapper').innerHTML = `
+      <div class="empty-state-shield">
+        <div class="empty-state-icon">🔒</div>
+        <div style="font-family:var(--font-head); font-weight:700; font-size:1.1rem; color:var(--text); margin-top:8px;">Authentication Required</div>
+        <div style="font-size:13px; color:var(--muted); max-width:320px; margin:0 auto; margin-bottom: 12px;">Please log in to view or verify claims associated with your account.</div>
+        <button class="btn btn-primary" onclick="openModal('loginModal')">🔒 Login Now</button>
+      </div>`;
+    return;
+  }
+  
+  const myMatchPairs = matchPairs.filter(p => isSamePhone(p.lostReporterPhone, currentUser.phone) || isSamePhone(p.foundReporterPhone, currentUser.phone));
+  
+  myMatchPairs.forEach(p => {
+    let lostItem = items.find(i => i.id === p.lostId);
+    let itemLabel = lostItem ? lostItem.name : 'Unknown Item';
+    let statusColor = colours[p.status] || 'var(--muted)';
+    let statusLabel = labelTexts[p.status] || p.status;
+    
+    let actionHtml = '';
+    
+    if (p.status === 'pending_claim') {
+      if (isSamePhone(currentUser.phone, p.lostReporterPhone)) {
+        actionHtml = `<button class="review-btn" onclick="openClaim(${p.lostId})">📝 Answer Questionnaire</button>`;
+      } else {
+        actionHtml = `<span style="color:var(--warning); font-size:12px; font-weight:500;">⏳ Awaiting Owner's Answers</span>`;
+      }
+    } else if (p.status === 'pending_verification') {
+      const isOwner = isSamePhone(currentUser.phone, p.lostReporterPhone);
+      const isFinder = isSamePhone(currentUser.phone, p.foundReporterPhone);
+      
+      if (isOwner) {
+        if (!p.lostVerified) {
+          actionHtml = `<button class="review-btn" onclick="openQuorumReview('${p.id}')">🗳️ Review & Sign</button>`;
+        } else {
+          actionHtml = `<span style="color:var(--warning); font-size:12px; font-weight:500;">⏳ Awaiting Finder's Signature</span>`;
+        }
+      } else if (isFinder) {
+        if (!p.foundVerified) {
+          actionHtml = `<button class="review-btn" onclick="openQuorumReview('${p.id}')">🗳️ Review & Sign</button>`;
+        } else {
+          actionHtml = `<span style="color:var(--warning); font-size:12px; font-weight:500;">⏳ Awaiting Owner's Signature</span>`;
+        }
+      }
+    } else if (p.status === 'verified') {
+      actionHtml = `<button class="review-btn" style="background:rgba(74,158,255,0.1);color:var(--info);border-color:rgba(74,158,255,0.3);" onclick="viewRoute('${p.id}')">🗺️ View Route</button>`;
+    }
+    
+    tableHtml += `<tr>
+      <td style="font-family:monospace;font-size:12px;font-weight:600;">${p.id}</td>
+      <td style="font-weight:500;">${p.label}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="match-bar" style="width:60px;margin-top:0;"><div class="match-bar-fill" style="width:${p.score}%;background:${p.score > 85 ? 'var(--accent)' : 'var(--warning)'}"></div></div>
+          <span style="font-weight:700;color:var(--text);">${p.score}%</span>
+        </div>
+      </td>
+      <td>
+        <span class="tag" style="background:${statusColor}15;color:${statusColor};border:1px solid ${statusColor}33;padding: 3px 10px;margin-right:0;">
+          ${statusLabel}
+        </span>
+      </td>
+      <td style="font-size:12px;color:var(--muted)">Just now</td>
+      <td style="text-align:right;">${actionHtml}</td>
+    </tr>`;
+  });
+  
+  if (tableHtml === '') {
+    document.getElementById('quorumTableWrapper').innerHTML = `
+      <div class="empty-state-shield">
+        <div class="empty-state-icon">🛡️</div>
+        <div style="font-family:var(--font-head); font-weight:700; font-size:1.1rem; color:var(--text); margin-top:8px;">P2P Claims Queue Secured</div>
+        <div style="font-size:13px; color:var(--muted); max-width:320px; margin:0 auto;">There are no active pending match claims involving your registered phone number.</div>
+      </div>`;
+  } else {
+    document.getElementById('quorumTableWrapper').innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Claim ID</th>
+               <th>Item Pair</th>
+               <th>Confidence</th>
+               <th>Current Status</th>
+               <th>Timestamp</th>
+               <th style="text-align:right;">Consensus Action</th>
+            </tr>
+          </thead>
+          <tbody id="claimTable">${tableHtml}</tbody>
+        </table>
+      </div>`;
+  }
+}
+
+function openQuorumReview(pairId) {
+  const p = matchPairs.find(x => x.id === pairId);
+  if (!p) return;
+  
+  const isOwner = currentUser && isSamePhone(currentUser.phone, p.lostReporterPhone);
+  const isFinder = currentUser && isSamePhone(currentUser.phone, p.foundReporterPhone);
+  
+  if (!isOwner && !isFinder) {
+    showToast('Unauthorized: Only the parties involved can view or verify this claim.', 'error');
+    return;
+  }
+  
+  const lostItem = items.find(i => i.id === p.lostId);
+  const foundItem = items.find(i => i.id === p.foundId);
+  if (!lostItem || !foundItem) return;
+  
+  // Set default answers if not present
+  const answers = p.answers || [
+    `Brand: ${lostItem.name}`,
+    `Condition: Space black color, slightly worn`,
+    `Identifiers: Registered to owner phone ${lostItem.reporterPhone}`
+  ];
+  
+  // Compute similarity breakdown
+  const sim = calculateRealSimilarity(lostItem, foundItem);
+  
+  document.getElementById('quorumContent').innerHTML = `
+    <div style="font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5;">
+      You are casting a consensus vote as a validator node. Review the claimant's questionnaire responses side-by-side with original report data and AI signal metrics.
+    </div>
+    
+    <div class="review-grid">
+      <!-- Lost Item -->
+      <div class="review-block" style="border-left: 3px solid var(--danger);">
+        <div class="review-title">🔴 Lost Item (Owner)</div>
+        <div class="review-row"><span class="review-key">Name</span><span class="review-val">${lostItem.name}</span></div>
+        <div class="review-row"><span class="review-key">Category</span><span class="review-val">${lostItem.cat}</span></div>
+        <div class="review-row"><span class="review-key">Location</span><span class="review-val">${lostItem.loc}</span></div>
+        <div class="review-row"><span class="review-key">Reporter</span><span class="review-val">${lostItem.reporterName}</span></div>
+        <div class="review-row" style="flex-direction:column; gap:4px; border-bottom:none;"><span class="review-key">Original Description</span><div style="color:var(--text); font-size:12px; margin-top:2px; line-height:1.4;">"${lostItem.desc}"</div></div>
+      </div>
+      
+      <!-- Found Item -->
+      <div class="review-block" style="border-left: 3px solid var(--accent);">
+        <div class="review-title">🟢 Found Item (Finder)</div>
+        <div class="review-row"><span class="review-key">Name</span><span class="review-val">${foundItem.name}</span></div>
+        <div class="review-row"><span class="review-key">Category</span><span class="review-val">${foundItem.cat}</span></div>
+        <div class="review-row"><span class="review-key">Location</span><span class="review-val">${foundItem.loc}</span></div>
+        <div class="review-row"><span class="review-key">Reporter</span><span class="review-val">${foundItem.reporterName}</span></div>
+        <div class="review-row" style="flex-direction:column; gap:4px; border-bottom:none;"><span class="review-key">Original Description</span><div style="color:var(--text); font-size:12px; margin-top:2px; line-height:1.4;">"${foundItem.desc}"</div></div>
+      </div>
+    </div>
+    
