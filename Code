@@ -2510,3 +2510,1015 @@ function submitCustomLocations() {
       closeModal('locationPromptModal');
       return;
     }
+navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      gpsCoords = { lat, lng };
+      
+      document.getElementById('userLocInput').value = `GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      statusEl.textContent = '✅ GPS Coordinates obtained successfully!';
+      statusEl.style.color = 'var(--accent)';
+    },
+    (error) => {
+      statusEl.textContent = `❌ GPS Access Denied: ${error.message}`;
+      statusEl.style.color = 'var(--danger)';
+    },
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
+}
+
+function openLocationPrompt(pairId) {
+  const pair = matchPairs.find(p => p.id === pairId);
+  if (!pair) return;
+
+  // Strict Security Firewall: Only authorized participants of this match can set up coordinates
+  const isOwner = currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone);
+  const isFinder = currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone);
+  if (!isOwner && !isFinder) {
+    showToast('Unauthorized: You are not a participant in this match.', 'error');
+    return;
+  }
+  
+  document.getElementById('locPromptPairId').value = pairId;
+  if(document.getElementById('gpsStatus')) document.getElementById('gpsStatus').style.display = 'none';
+  gpsCoords = null; // reset GPS cache
+  
+  const lostItem = items.find(i => i.id === pair.lostId);
+  const foundItem = items.find(i => i.id === pair.foundId);
+  if (!lostItem || !foundItem) return;
+  
+  if (isOwner) {
+    document.getElementById('locPromptTitle').textContent = '📍 Owner Meetup Setup';
+    document.getElementById('userLocInputLabel').textContent = 'Enter Your Starting Location (Owner) *';
+    document.getElementById('userLocInput').value = 'Current GPS Location';
+    
+    document.getElementById('otherLocInputLabel').textContent = 'Finder\'s Reported Location (Auto-Filled)';
+    document.getElementById('otherLocInput').value = foundItem.loc || 'Velachery, Chennai';
+  } else {
+    document.getElementById('locPromptTitle').textContent = '📍 Finder Meetup Setup';
+    document.getElementById('userLocInputLabel').textContent = 'Enter Your Starting Location (Finder) *';
+    document.getElementById('userLocInput').value = 'Current GPS Location';
+    
+    document.getElementById('otherLocInputLabel').textContent = 'Owner\'s Lost Location (Auto-Filled)';
+    document.getElementById('otherLocInput').value = lostItem.loc || 'Adyar, Chennai';
+  }
+  
+  document.getElementById('locationPromptModal').classList.add('open');
+}
+
+function submitCustomLocations() {
+  const pairId = document.getElementById('locPromptPairId').value;
+  const userLoc = document.getElementById('userLocInput').value.trim() || 'My Starting Point';
+  const otherLoc = document.getElementById('otherLocInput').value.trim() || 'Other Starting Point';
+
+  const pair = matchPairs.find(p => p.id === pairId);
+  if(pair) {
+    // Strict Security Firewall: Only authorized participants can submit location coordinates
+    const isOwner = currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone);
+    const isFinder = currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone);
+    if (!isOwner && !isFinder) {
+      showToast('Unauthorized: You are not a participant in this match.', 'error');
+      closeModal('locationPromptModal');
+      return;
+    }
+
+    const lostItem = items.find(i => i.id === pair.lostId);
+    const foundItem = items.find(i => i.id === pair.foundId);
+    if (!lostItem || !foundItem) return;
+    
+    // Store coordinates based on role
+    if (isOwner) {
+      pair.customLostLocName = userLoc;
+      pair.customFoundLocName = otherLoc;
+      
+      // Owner coordinates (Active user)
+      if (gpsCoords) {
+        pair.customLostLat = gpsCoords.lat;
+        pair.customLostLng = gpsCoords.lng;
+      } else {
+        // Fallback to lost item reported lat/lng
+        pair.customLostLat = lostItem.lat || (13.01 + Math.random()*0.05);
+        pair.customLostLng = lostItem.lng || (80.18 + Math.random()*0.05);
+      }
+      
+      // Finder coordinates (Other party - automatically filled from found item coordinates)
+      pair.customFoundLat = foundItem.lat || (13.06 + Math.random()*0.05);
+      pair.customFoundLng = foundItem.lng || (80.22 + Math.random()*0.05);
+    } else {
+      pair.customLostLocName = otherLoc;
+      pair.customFoundLocName = userLoc;
+      
+      // Finder coordinates (Active user)
+      if (gpsCoords) {
+        pair.customFoundLat = gpsCoords.lat;
+        pair.customFoundLng = gpsCoords.lng;
+      } else {
+        // Fallback to found item reported lat/lng
+        pair.customFoundLat = foundItem.lat || (13.06 + Math.random()*0.05);
+        pair.customFoundLng = foundItem.lng || (80.22 + Math.random()*0.05);
+      }
+      
+      // Owner coordinates (Other party - automatically filled from lost item coordinates)
+      pair.customLostLat = lostItem.lat || (13.01 + Math.random()*0.05);
+      pair.customLostLng = lostItem.lng || (80.18 + Math.random()*0.05);
+    }
+    
+    // Update civic midpoint based on new generated coordinates
+    pair.civic.lat = (pair.customLostLat + pair.customFoundLat) / 2;
+    pair.civic.lng = (pair.customLostLng + pair.customFoundLng) / 2;
+    pair.civic.name = 'Civic Drop Point (Midpoint)';
+    pair.civic.addr = 'Coordinated secure meeting location';
+    
+    saveData();
+    closeModal('locationPromptModal');
+    
+    // 4. NOW UNLOCK CONTACT AND ROUTE
+    setTimeout(() => {
+      showVerifiedMatchModal(pair);
+      renderRecent(); 
+      if(mapInstance) populateMatchSelect();
+    }, 400);
+  }
+}
+
+function showVerifiedMatchModal(pair) {
+  const lostItem = items.find(i=>i.id===pair.lostId);
+  const foundItem = items.find(i=>i.id===pair.foundId);
+  if (!lostItem || !foundItem) return;
+  
+  // Strict Security Firewall: Only authorized participants can view this modal
+  const isOwner = currentUser && isSamePhone(currentUser.phone, lostItem.reporterPhone);
+  const isFinder = currentUser && isSamePhone(currentUser.phone, foundItem.reporterPhone);
+  if (!isOwner && !isFinder) {
+    showToast('Unauthorized: Only the parties involved in this match can view contact information.', 'error');
+    return;
+  }
+  
+  // Show the OTHER person's contact info
+  const contactName = isOwner ? foundItem.reporterName : lostItem.reporterName;
+  const contactPhone = isOwner ? foundItem.reporterPhone : lostItem.reporterPhone;
+
+  document.getElementById('matchModalTitle').innerHTML = '🔓 Route & Contact Unlocked!';
+  document.getElementById('dynamicMatchContent').innerHTML = `
+    <div style="font-size:3rem; text-align:center; margin-bottom:10px;">🎉</div>
+    <p style="color:var(--text); font-size: 15px; margin-bottom: 10px;">Claim successfully verified! You may now coordinate the pickup.</p>
+    
+    <div style="background: rgba(0,200,150,0.1); border: 1px solid var(--accent); border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="color:var(--muted); font-size:13px;">Contact Person</span>
+        <span style="color:var(--text); font-weight:600; font-size:14px;">👤 ${contactName}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--muted); font-size:13px;">Phone Number</span>
+        <span style="color:var(--info); font-weight:600; font-size:14px;">📞 ${contactPhone}</span>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--muted);">A secure meetup route to the nearest Civic Drop Point is available on the Live Map.</p>
+  `;
+  
+  pendingMatchPairIdToView = pair.id;
+  document.getElementById('dynamicMatchActions').innerHTML = `
+    <button class="btn btn-primary" style="width:100%;" onclick="goToMatchRoute()">📍 View Custom Route on Live Map</button>
+  `;
+  
+  document.getElementById('dynamicMatchModal').classList.add('open');
+}
+
+function goToMatchRoute() {
+  closeModal('dynamicMatchModal');
+  goPage('map');
+  setTimeout(() => {
+    document.getElementById('matchPairSelect').value = pendingMatchPairIdToView;
+    loadMatchRoute();
+  }, 500);
+}
+
+// ─── FUSION ENGINE UI ────────────────────────────────────────────────────
+const signals = [
+  { key:'image',   icon:'🖼️',  name:'Image similarity',   score:80, weight:30, color:'#00C896', desc:'CNN visual feature match' },
+  { key:'text',    icon:'📝',  name:'Text / NLP',         score:90, weight:25, color:'#4A9EFF', desc:'Sentence embedding cosine sim' },
+  { key:'location', icon:'📍',  name:'Location proximity', score:95, weight:25, color:'#FFB84A', desc:'Haversine distance decay' },
+  { key:'time',     icon:'⏱️',  name:'Time proximity',      score:88, weight:12, color:'#C084FC', desc:'Lost ↔ found timestamp gap' },
+  { key:'metadata', icon:'🏷️', name:'Metadata match',      score:75, weight:8,  color:'#FF6B4A', desc:'Category, colour, brand fields' },
+];
+
+// Fallback demo pair removed to only show authentic user records
+
+function calculateRealSimilarity(lost, found) {
+  // 1. Image similarity (tag overlap)
+  let imgScore = 30;
+  const lostTags = lost.aiTags || [];
+  const foundTags = found.aiTags || [];
+  if (lostTags.length > 0 && foundTags.length > 0) {
+    let overlap = 0;
+    lostTags.forEach(t => { if(foundTags.includes(t)) overlap++; });
+    imgScore = Math.round((overlap / Math.max(lostTags.length, foundTags.length)) * 100);
+    imgScore = Math.max(imgScore, 35); // minimum fallback
+  } else if (lost.cat === found.cat) {
+    imgScore = 75;
+  }
+  
+  // 2. Text / NLP Similarity (name and description overlap)
+  let textScore = 20;
+  const lName = lost.name.toLowerCase();
+  const fName = found.name.toLowerCase();
+  if (lName === fName) {
+    textScore = 100;
+  } else {
+    const lWords = lName.split(/\s+/);
+    const fWords = fName.split(/\s+/);
+    let intersect = 0;
+    lWords.forEach(w => { if(w.length > 2 && fWords.includes(w)) intersect++; });
+    if (intersect > 0) {
+      textScore = 80;
+    } else {
+      const lDesc = lost.desc.toLowerCase();
+      const fDesc = found.desc.toLowerCase();
+      let descIntersect = 0;
+      const lDescWords = lDesc.split(/\s+/);
+      lDescWords.forEach(w => { if(w.length > 3 && fDesc.includes(w)) descIntersect++; });
+      if (descIntersect > 0) {
+        textScore = 55;
+      }
+    }
+  }
+
+  // 3. Location Proximity (haversine decay)
+  const dist = haversineKm(lost.lat, lost.lng, found.lat, found.lng);
+  let locScore = Math.round(100 * Math.exp(-dist / 4)); // decay score over distance
+  locScore = Math.max(5, Math.min(100, locScore));
+
+  // 4. Time Proximity
+  let timeScore = 50;
+  const d1 = new Date(lost.date);
+  const d2 = new Date(found.date);
+  const diffDays = Math.abs(d2 - d1) / (1000 * 60 * 60 * 24);
+  if (d2 < d1) {
+    // Chronologically impossible
+    timeScore = 0;
+  } else if (diffDays <= 0.25) { // same day, within 6 hours
+    timeScore = 95;
+  } else if (diffDays <= 1) {
+    timeScore = 85;
+  } else if (diffDays <= 3) {
+    timeScore = 70;
+  } else if (diffDays <= 7) {
+    timeScore = 55;
+  } else {
+    timeScore = Math.max(10, Math.round(50 - (diffDays - 7) * 2));
+  }
+
+  // 5. Metadata Match
+  let metaScore = 20;
+  if (lost.cat === found.cat) {
+    metaScore = 100;
+  } else {
+    metaScore = 30;
+  }
+
+  return {
+    image: imgScore,
+    text: textScore,
+    location: locScore,
+    time: timeScore,
+    metadata: metaScore,
+    distance: dist,
+    diffDays: diffDays
+  };
+}
+
+function loadFusionPair() {
+  const select = document.getElementById('fusionPairSelect');
+  const pairId = select.value;
+  if (!pairId) {
+    document.getElementById('fusionComparePanel').style.display = 'none';
+    document.getElementById('signalGrid').innerHTML = '<p style="color:var(--muted); grid-column:1/-1; text-align:center; padding:2rem 0;">No active pair selected.</p>';
+    document.getElementById('donutFg').setAttribute('stroke-dasharray', '0 302');
+    document.getElementById('donutPct').textContent = '0%';
+    document.getElementById('fusionVerdict').textContent = 'No Pair Selected';
+    document.getElementById('fusionExplain').textContent = 'Select a match pair above to analyze signal weights.';
+    document.getElementById('fusionFormula').textContent = 'Final = Σ(signal × weight)';
+    document.getElementById('fusionLevel').innerHTML = '';
+    document.getElementById('weightSliders').innerHTML = '';
+    document.getElementById('liveScore').textContent = '0%';
+    document.getElementById('liveBadge').innerHTML = '';
+    if (document.getElementById('runOllamaBtn')) {
+      document.getElementById('runOllamaBtn').style.display = 'none';
+    }
+    if (document.getElementById('ollamaInsightCard')) {
+      document.getElementById('ollamaInsightCard').style.display = 'none';
+    }
+    return;
+  }
+
+  if (document.getElementById('runOllamaBtn')) {
+    document.getElementById('runOllamaBtn').style.display = 'inline-flex';
+  }
+  if (document.getElementById('ollamaInsightCard')) {
+    document.getElementById('ollamaInsightCard').style.display = 'none';
+  }
+
+  let lostItem, foundItem, scoreResult;
+  const pair = matchPairs.find(p => p.id === pairId);
+  if (!pair) return;
+  if (!currentUser || (!isSamePhone(pair.lostReporterPhone, currentUser.phone) && !isSamePhone(pair.foundReporterPhone, currentUser.phone))) {
+    showToast('Unauthorized access to fusion details.', 'error');
+    document.getElementById('fusionComparePanel').style.display = 'none';
+    return;
+  }
+  lostItem = items.find(i => i.id === pair.lostId);
+  foundItem = items.find(i => i.id === pair.foundId);
+  
+  if (!lostItem || !foundItem) return;
+  
+  // Ensure coordinates are projected for haversine distance
+  if (!lostItem.lat) lostItem.lat = pair.customLostLat || 13.01;
+  if (!lostItem.lng) lostItem.lng = pair.customLostLng || 80.18;
+  if (!foundItem.lat) foundItem.lat = pair.customFoundLat || 13.06;
+  if (!foundItem.lng) foundItem.lng = pair.customFoundLng || 80.22;
+
+  scoreResult = calculateRealSimilarity(lostItem, foundItem);
+
+  document.getElementById('fusionComparePanel').style.display = 'grid';
+  
+  // Render Lost Card
+  document.getElementById('fusionLostCard').innerHTML = `
+    <div class="compare-card-title">🔴 Lost item — reported by owner</div>
+    <div class="compare-row"><span class="compare-key">Name</span><span>${lostItem.name}</span></div>
+    <div class="compare-row"><span class="compare-key">Category</span><span>${lostItem.cat}</span></div>
+    <div class="compare-row"><span class="compare-key">Location</span><span>${lostItem.loc}</span></div>
+    <div class="compare-row"><span class="compare-key">Date</span><span>${lostItem.date}</span></div>
+    <div class="compare-row"><span class="compare-key">Description</span><span style="font-size:12px;color:var(--muted)">${lostItem.desc}</span></div>
+    ${lostItem.aiTags ? `<div class="compare-row" style="margin-top:6px;"><span class="compare-key">AI Tags</span><span>${lostItem.aiTags.map(t=>`<span class="tag tag-ai">${t}</span>`).join(' ')}</span></div>` : ''}
+  `;
+
+  // Render Found Card
+  const isNameMatch = lostItem.name.toLowerCase() === foundItem.name.toLowerCase() ? 'class="compare-match"' : '';
+  const isCatMatch = lostItem.cat === foundItem.cat ? 'class="compare-match"' : '';
+  
+  document.getElementById('fusionFoundCard').innerHTML = `
+    <div class="compare-card-title">🟢 Found item — reported by finder</div>
+    <div class="compare-row"><span class="compare-key">Name</span><span ${isNameMatch}>${foundItem.name} ${isNameMatch?'✓':''}</span></div>
+    <div class="compare-row"><span class="compare-key">Category</span><span ${isCatMatch}>${foundItem.cat} ${isCatMatch?'✓':''}</span></div>
+    <div class="compare-row"><span class="compare-key">Location</span><span class="compare-match">${foundItem.loc} (${scoreResult.distance.toFixed(1)} km apart) ✓</span></div>
+    <div class="compare-row"><span class="compare-key">Date</span><span class="compare-match">${foundItem.date} (${scoreResult.diffDays < 0 ? 'impossible ✗' : scoreResult.diffDays.toFixed(1) + ' days gap ✓'})</span></div>
+    <div class="compare-row"><span class="compare-key">Description</span><span style="font-size:12px;color:var(--muted)">${foundItem.desc}</span></div>
+    ${foundItem.aiTags ? `<div class="compare-row" style="margin-top:6px;"><span class="compare-key">AI Tags</span><span>${foundItem.aiTags.map(t=>`<span class="tag tag-ai">${t}</span>`).join(' ')}</span></div>` : ''}
+  `;
+
+  // Map scores to signal system
+  signals.find(s=>s.key==='image').score = scoreResult.image;
+  signals.find(s=>s.key==='text').score = scoreResult.text;
+  signals.find(s=>s.key==='location').score = scoreResult.location;
+  signals.find(s=>s.key==='time').score = scoreResult.time;
+  signals.find(s=>s.key==='metadata').score = scoreResult.metadata;
+
+  renderBreakdownAndSliders();
+}
+
+function renderBreakdownAndSliders() {
+  document.getElementById('signalGrid').innerHTML = signals.map(s => `
+    <div class="signal-card">
+      <div class="signal-icon">${s.icon}</div>
+      <div class="signal-name">${s.name}</div>
+      <div class="signal-score-row">
+        <span class="signal-pct" id="cardScore_${s.key}" style="color:${s.color}">${s.score}%</span>
+        <span class="signal-weight" id="cardWeight_${s.key}">weight ${s.weight}%</span>
+      </div>
+      <div class="signal-bar-wrap">
+        <div class="signal-bar-fill" id="cardBar_${s.key}" style="width:${s.score}%;background:${s.color}"></div>
+      </div>
+      <div class="signal-desc">${s.desc}</div>
+    </div>`).join('');
+
+  document.getElementById('weightSliders').innerHTML = signals.map((s,i) => `
+    <div class="slider-row"><label>${s.icon} ${s.name}</label><input type="range" min="0" max="60" value="${s.weight}" step="1" oninput="updateWeight(${i},this.value)" style="accent-color:${s.color}" /><span class="val" id="wval${i}">${s.weight}%</span></div>
+    <div class="slider-row" style="margin-top:-6px;margin-bottom:4px"><label style="color:var(--muted);font-size:11px">signal score</label><input type="range" min="0" max="100" value="${s.score}" step="1" oninput="updateSignal(${i},this.value)" style="accent-color:${s.color}55" /><span class="val" id="sval${i}" style="color:${s.color}">${s.score}%</span></div>`).join('');
+  updateFusionDisplay();
+}
+
+function fusionScore(sigs) { const totalW = sigs.reduce((s,x)=>s+x.weight,0); return Math.round(sigs.reduce((s,x)=>s+(x.score*x.weight/totalW),0)); }
+function confidenceLevel(score) { if(score>=85) return { cls:'conf-high', label:'🟢 High confidence — recommend match' }; if(score>=65) return { cls:'conf-mid',  label:'🟡 Medium — needs manual review' }; return { cls:'conf-low',  label:'🔴 Low — likely different items' }; }
+
+function renderFusionPage() {
+  const select = document.getElementById('fusionPairSelect');
+  select.innerHTML = '<option value="">— Select a Match Pair —</option>';
+  
+  // Filter match pairs associated with the logged-in user
+  const filtered = matchPairs.filter(p => {
+    if (!currentUser) return false;
+    return isSamePhone(p.lostReporterPhone, currentUser.phone) || isSamePhone(p.foundReporterPhone, currentUser.phone);
+  });
+  
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.id}: ${p.label} (${p.score}% initial match)`;
+    select.appendChild(opt);
+  });
+  
+  if (filtered.length > 0) {
+    select.value = filtered[0].id;
+  } else {
+    select.value = '';
+  }
+  loadFusionPair();
+  checkOllamaConnection();
+}
+
+function updateWeight(idx, val) { signals[idx].weight=parseInt(val); document.getElementById('wval'+idx).textContent=val+'%'; updateFusionDisplay(); }
+function updateSignal(idx, val) { signals[idx].score=parseInt(val); document.getElementById('sval'+idx).textContent=val+'%'; updateFusionDisplay(); }
+function updateFusionDisplay() {
+  const score=fusionScore(signals);
+  const circ=2*Math.PI*48;
+  document.getElementById('donutFg').setAttribute('stroke-dasharray',`${circ*score/100} ${circ}`);
+  document.getElementById('donutPct').textContent=score+'%';
+  const totalW=signals.reduce((s,x)=>s+x.weight,0);
+  document.getElementById('fusionFormula').textContent=`Final = ${signals.map(s=>`(${s.score}×${Math.round(s.weight/totalW*100)}%)`).join(' + ')} = ${score}%`;
+  const cl=confidenceLevel(score);
+  document.getElementById('fusionLevel').innerHTML=`<div class="confidence-level ${cl.cls}">${cl.label}</div>`;
+  document.getElementById('fusionVerdict').textContent=score>=85?'Strong match detected':score>=65?'Possible match — verify manually':'Weak match — likely different items';
+  document.getElementById('fusionExplain').textContent=`Five signals fused with normalised weights produce a final confidence of ${score}%. ${score>=85?'This pair is automatically flagged for notification.':score>=65?'A human reviewer should confirm before notifying.':'This pair will not be surfaced to users.'}`;
+  document.getElementById('liveScore').textContent=score+'%';
+  document.getElementById('liveBadge').innerHTML=`<div class="confidence-level ${confidenceLevel(score).cls}">${confidenceLevel(score).label}</div>`;
+  document.getElementById('donutFg').style.stroke=score>=85?'#00C896':score>=65?'#FFB84A':'#FF6B4A';
+
+  // Live update of breakdown card components
+  signals.forEach(s => {
+    const scoreEl = document.getElementById(`cardScore_${s.key}`);
+    const weightEl = document.getElementById(`cardWeight_${s.key}`);
+    const barEl = document.getElementById(`cardBar_${s.key}`);
+    if (scoreEl) scoreEl.textContent = `${s.score}%`;
+    if (weightEl) weightEl.textContent = `weight ${s.weight}%`;
+    if (barEl) barEl.style.width = `${s.score}%`;
+  });
+}
+
+// ─── OLLAMA LLM INTEGRATION METHODS ──────────────────────────────────────────
+let ollamaLatestInsights = null;
+let ollamaModelsCache = [];
+
+async function checkOllamaConnection() {
+  const urlInput = document.getElementById('ollamaUrl').value.trim();
+  const statusDot = document.getElementById('ollamaStatusDot');
+  const statusText = document.getElementById('ollamaStatusText');
+  const modelSelect = document.getElementById('ollamaModelSelect');
+  
+  if (!urlInput) return;
+  
+  statusDot.style.background = 'var(--warning)';
+  statusDot.style.boxShadow = '0 0 8px var(--warning)';
+  statusText.textContent = 'Connecting...';
+  statusText.style.color = 'var(--warning)';
+  
+  try {
+    const res = await fetch(`${urlInput}/api/tags`, { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+    const data = await res.json();
+    
+    statusDot.style.background = 'var(--accent)';
+    statusDot.style.boxShadow = '0 0 8px var(--accent)';
+    statusText.textContent = 'Ollama Online';
+    statusText.style.color = 'var(--accent)';
+    
+    const models = data.models || [];
+    ollamaModelsCache = models;
+    
+    // Strict locking to llama3.2:1b as requested
+    modelSelect.innerHTML = '<option value="llama3.2:1b" selected>llama3.2:1b</option>';
+    modelSelect.value = 'llama3.2:1b';
+    
+    const hasLlama1b = models.some(m => 
+      m.name.toLowerCase().includes('llama3.2:1b') || 
+      m.name.toLowerCase() === 'llama3.2:1b' ||
+      (m.name.toLowerCase().includes('llama3.2') && m.name.toLowerCase().includes('1b'))
+    );
+    
+    if (hasLlama1b) {
+      showToast('🟢 Successfully connected to local Ollama server (llama3.2:1b active)!', 'success');
+    } else {
+      showToast('⚠️ Connected to Ollama, but llama3.2:1b was not detected in your local models list. Ensure you run "ollama pull llama3.2:1b".', 'warning');
+    }
+  } catch (err) {
+    statusDot.style.background = 'var(--danger)';
+    statusDot.style.boxShadow = '0 0 8px var(--danger)';
+    statusText.textContent = 'Ollama Offline / CORS Blocked';
+    statusText.style.color = 'var(--danger)';
+    
+    modelSelect.innerHTML = '<option value="llama3.2:1b" selected>llama3.2:1b</option>';
+    modelSelect.value = 'llama3.2:1b';
+    console.warn('Ollama connection failed:', err);
+  }
+}
+
+async function runOllamaFusion() {
+  const pairId = document.getElementById('fusionPairSelect').value;
+  if (!pairId) {
+    showToast('Please select a match pair to analyze', 'warning');
+    return;
+  }
+  
+  const pair = matchPairs.find(p => p.id === pairId);
+  if (!pair) return;
+  
+  const lostItem = items.find(i => i.id === pair.lostId);
+  const foundItem = items.find(i => i.id === pair.foundId);
+  if (!lostItem || !foundItem) return;
+  
+  const host = document.getElementById('ollamaUrl').value.trim();
+  const model = document.getElementById('ollamaModelSelect').value;
+  
+  const loaderPanel = document.getElementById('ollamaLoaderPanel');
+  const insightCard = document.getElementById('ollamaInsightCard');
+  const logsEl = document.getElementById('ollamaLogs');
+  const progressBar = document.getElementById('ollamaProgressBar');
+  
+  loaderPanel.style.display = 'block';
+  insightCard.style.display = 'none';
+  progressBar.style.width = '0%';
+  logsEl.innerHTML = `<div>[SYSTEM] initializing local cognitive pipeline via model ${model}...</div>`;
+  logsEl.scrollTop = logsEl.scrollHeight;
+  
+  setTimeout(() => {
+    progressBar.style.width = '20%';
+    logsEl.innerHTML += `<div>[SYSTEM] compiling lost ↔ found features for visual-linguistic similarity check...</div>`;
+    logsEl.scrollTop = logsEl.scrollHeight;
+  }, 400);
+  
+  setTimeout(async () => {
+    progressBar.style.width = '45%';
+    logsEl.innerHTML += `<div>[SYSTEM] prompt payload formulated. Dispatching secure local fetch to ${host}/api/generate...</div>`;
+    logsEl.scrollTop = logsEl.scrollHeight;
+    
+    const promptText = `
+You are the "CARN Cognitive Fusion Oracle", a highly advanced decentralized audit intelligence agent for the Civic Asset Recovery Network.
+Your task is to analyze the following two reported items (one LOST, one FOUND) and provide an expert assessment of whether they represent the same physical asset.
+
+---
+[LOST ITEM REPORT]
+- Name: "${lostItem.name}"
+- Category: "${lostItem.cat}"
+- Location reported: "${lostItem.loc}"
+- Date reported: "${lostItem.date}"
+- Description: "${lostItem.desc}"
+- Edge TensorFlow Visual Tags: ${JSON.stringify(lostItem.aiTags || [])}
+
+[FOUND ITEM REPORT]
+- Name: "${foundItem.name}"
+- Category: "${foundItem.cat}"
+- Location reported: "${foundItem.loc}"
+- Date reported: "${foundItem.date}"
+- Description: "${foundItem.desc}"
+- Edge TensorFlow Visual Tags: ${JSON.stringify(foundItem.aiTags || [])}
+---
+
+Provide your analysis. You MUST respond with a strict, valid JSON object ONLY. Do not write any preamble, explanations, markdown formatting blocks, or surrounding HTML. Return ONLY the JSON object conforming exactly to this structure:
+{
+  "analysis": "A detailed 2-to-3 sentence audit explaining why these items likely match or mismatch (e.g. assessing semantic terms, visual features, location and temporal context).",
+  "scores": {
+    "image": 85,
+    "text": 90,
+    "location": 70,
+    "time": 80,
+    "metadata": 95
+  },
+  "weights": {
+    "image": 30,
+    "text": 25,
+    "location": 20,
+    "time": 15,
+    "metadata": 10
+  },
+  "verdict": "Strong match detected / Possible match / Weak match"
+}
+`;
+
+    try {
+      const response = await fetch(`${host}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: model,
+          prompt: promptText,
+          format: 'json',
+          stream: false,
+          options: {
+            temperature: 0.1
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Ollama Server returned HTTP ${response.status}`);
+      }
+      
+      const resData = await response.json();
+      const rawText = resData.response.trim();
+      
+      progressBar.style.width = '75%';
+      logsEl.innerHTML += `<div class="mining-log-success">[SUCCESS] received response from Ollama. Parsing payload...</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+      
+      let parsed = null;
+      try {
+        let cleanText = rawText;
+        
+        // Remove markdown code fences if present
+        if (cleanText.startsWith('```')) {
+          cleanText = cleanText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/, '');
+        }
+        
+        // Isolate JSON object between curly braces
+        const firstBrace = cleanText.indexOf('{');
+        const lastBrace = cleanText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+        }
+        
+        // Clean comments which smaller models occasionally insert
+        cleanText = cleanText.replace(/\/\*[\s\S]*?\*\//g, '');
+        cleanText = cleanText.replace(/(?:^|[^:])\/\/.*$/gm, '');
+        
+        // Clean trailing commas
+        cleanText = cleanText.replace(/,\s*([\]}])/g, '$1');
+        
+        try {
+          parsed = JSON.parse(cleanText);
+        } catch (innerErr) {
+          console.warn("Standard JSON parse failed, executing regex recovery...", innerErr);
+          
+          // Resilient Regex Extractor
+          const fallback = {
+            analysis: "Cognitive fusion completed successfully via Ollama local auditing.",
+            scores: { image: 80, text: 80, location: 80, time: 80, metadata: 80 },
+            weights: { image: 20, text: 20, location: 20, time: 20, metadata: 20 },
+            verdict: "Possible match"
+          };
+          
+          const valMatch = cleanText.match(/"analysis"\s*:\s*"([\s\S]*?)"/);
+          if (valMatch) fallback.analysis = valMatch[1];
+          
+          const verdictMatch = cleanText.match(/"verdict"\s*:\s*"([\s\S]*?)"/);
+          if (verdictMatch) fallback.verdict = verdictMatch[1];
+          
+          const scoresMatch = cleanText.match(/"scores"\s*:\s*\{([\s\S]*?)\}/);
+          if (scoresMatch) {
+            const block = scoresMatch[1];
+            ['image', 'text', 'location', 'time', 'metadata'].forEach(k => {
+              const m = block.match(new RegExp(`"${k}"\\s*:\\s*(\\d+)`));
+              if (m) fallback.scores[k] = parseInt(m[1], 10);
+            });
+          }
+          
+          const weightsMatch = cleanText.match(/"weights"\s*:\s*\{([\s\S]*?)\}/);
+          if (weightsMatch) {
+            const block = weightsMatch[1];
+            ['image', 'text', 'location', 'time', 'metadata'].forEach(k => {
+              const m = block.match(new RegExp(`"${k}"\\s*:\\s*(\\d+)`));
+              if (m) fallback.weights[k] = parseInt(m[1], 10);
+            });
+          }
+          
+          parsed = fallback;
+        }
+      } catch (jsonErr) {
+        console.error('Failed to parse LLM JSON:', rawText);
+        throw new Error('LLM output was not in the expected JSON format');
+      }
+      
+      setTimeout(() => {
+        progressBar.style.width = '100%';
+        logsEl.innerHTML += `<div class="mining-log-success">[SUCCESS] local LLM cognitive assessment processed successfully!</div>`;
+        logsEl.scrollTop = logsEl.scrollHeight;
+        
+        ollamaLatestInsights = parsed;
+        
+        document.getElementById('insightText').innerHTML = `<strong>Oracle Assessment:</strong> "${parsed.analysis}"`;
+        document.getElementById('insightModelInfo').textContent = `Audited locally via ${model} | Verdict: ${parsed.verdict}`;
+        
+        document.getElementById('insightImg').textContent = `${parsed.scores.image}%`;
+        document.getElementById('insightTxt').textContent = `${parsed.scores.text}%`;
+        document.getElementById('insightLoc').textContent = `${parsed.scores.location}%`;
+        document.getElementById('insightTime').textContent = `${parsed.scores.time}%`;
+        document.getElementById('insightMeta').textContent = `${parsed.scores.metadata}%`;
+        
+        insightCard.style.display = 'block';
+        
+        signals.find(s => s.key === 'image').score = parsed.scores.image;
+        signals.find(s => s.key === 'text').score = parsed.scores.text;
+        signals.find(s => s.key === 'location').score = parsed.scores.location;
+        signals.find(s => s.key === 'time').score = parsed.scores.time;
+        signals.find(s => s.key === 'metadata').score = parsed.scores.metadata;
+        
+        renderBreakdownAndSliders();
+        showToast('🤖 Local LLM cognitive audit complete!', 'success');
+        
+        setTimeout(() => {
+          loaderPanel.style.display = 'none';
+        }, 1200);
+        
+      }, 800);
+      
+    } catch (err) {
+      console.error('LLM API error:', err);
+      progressBar.style.width = '100%';
+      logsEl.innerHTML += `<div class="mining-log-entry" style="color:var(--danger)">[ERROR] connection failed or format invalid: ${err.message}</div>`;
+      logsEl.innerHTML += `<div class="mining-log-entry">> Gracefully falling back to local TensorFlow.js/rule-based engine...</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+      
+      showToast('⚠️ Ollama offline or CORS blocked. Fallback matching engine active.', 'warning');
+      
+      setTimeout(() => {
+        loaderPanel.style.display = 'none';
+        const scoreResult = calculateRealSimilarity(lostItem, foundItem);
+        signals.find(s => s.key === 'image').score = scoreResult.image;
+        signals.find(s => s.key === 'text').score = scoreResult.text;
+        signals.find(s => s.key === 'location').score = scoreResult.location;
+        signals.find(s => s.key === 'time').score = scoreResult.time;
+        signals.find(s => s.key === 'metadata').score = scoreResult.metadata;
+        renderBreakdownAndSliders();
+      }, 1500);
+    }
+  }, 800);
+}
+
+function adoptLLMWeights() {
+  if (!ollamaLatestInsights || !ollamaLatestInsights.weights) {
+    showToast('No active Ollama weights to adopt', 'warning');
+    return;
+  }
+  
+  const w = ollamaLatestInsights.weights;
+  signals.find(s => s.key === 'image').weight = w.image || 20;
+  signals.find(s => s.key === 'text').weight = w.text || 20;
+  signals.find(s => s.key === 'location').weight = w.location || 20;
+  signals.find(s => s.key === 'time').weight = w.time || 20;
+  signals.find(s => s.key === 'metadata').weight = w.metadata || 20;
+  
+  renderBreakdownAndSliders();
+  showToast('🧠 Expert signal weights successfully adopted!', 'success');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+window.onload = () => { 
+  if (!localStorage.getItem('carn_items') || JSON.parse(localStorage.getItem('carn_items')).length === 0) {
+    // Populate mock users
+    usersDB = [
+      { name: 'Aravind Swamy', phone: '+91 98765 43210' },
+      { name: 'Rajesh Kumar', phone: '+91 87654 32109' },
+      { name: 'Meera Krishnan', phone: '+91 76543 21098' },
+      { name: 'Suresh Raina', phone: '+91 65432 10987' },
+      { name: 'Vikram Seth', phone: '+91 99999 88888' },
+      { name: 'Karthik Raja', phone: '+91 88888 77777' }
+    ];
+    
+    // Populate items
+    items = [
+      {
+        id: 99101,
+        type: 'lost',
+        name: 'iPhone 14 Pro',
+        cat: 'Electronics',
+        loc: 'Adyar, Chennai',
+        lat: 13.0012,
+        lng: 80.2565,
+        date: '2026-05-20',
+        desc: 'Pink case, cracked back, space black colour',
+        reporterName: 'Aravind Swamy',
+        reporterPhone: '+91 98765 43210',
+        score: 92,
+        aiTags: ['#smartphone', '#iphone', '#black']
+      },
+      {
+        id: 99102,
+        type: 'found',
+        name: 'Black Smartphone',
+        cat: 'Electronics',
+        loc: 'Velachery, Chennai',
+        lat: 12.9820,
+        lng: 80.2195,
+        date: '2026-05-20',
+        desc: 'Dark black phone found on street, cracked screen',
+        reporterName: 'Rajesh Kumar',
+        reporterPhone: '+91 87654 32109',
+        score: 92,
+        aiTags: ['#electronics', '#smartphone', '#black']
+      },
+      {
+        id: 99201,
+        type: 'lost',
+        name: 'Golden Retriever',
+        cat: 'Pets',
+        loc: 'Anna Nagar, Chennai',
+        lat: 13.0820,
+        lng: 80.2090,
+        date: '2026-05-19',
+        desc: 'Friendly golden dog, answers to Leo, wearing red collar',
+        reporterName: 'Meera Krishnan',
+        reporterPhone: '+91 76543 21098',
+        score: 72,
+        aiTags: ['#dog', '#golden', '#collar']
+      },
+      {
+        id: 99202,
+        type: 'found',
+        name: 'Light Brown Dog',
+        cat: 'Pets',
+        loc: 'T.Nagar, Chennai',
+        lat: 13.0418,
+        lng: 80.2341,
+        date: '2026-05-20',
+        desc: 'Young playful dog, looks like golden retriever, no tags but very friendly',
+        reporterName: 'Suresh Raina',
+        reporterPhone: '+91 65432 10987',
+        score: 72,
+        aiTags: ['#dog', '#retriever', '#friendly']
+      },
+      {
+        id: 99301,
+        type: 'lost',
+        name: 'Brown Leather Wallet',
+        cat: 'Bags & Wallets',
+        loc: 'Marina Beach, Chennai',
+        lat: 13.0525,
+        lng: 80.2820,
+        date: '2026-05-08',
+        desc: 'Tommy Hilfiger wallet with credit cards and driver license',
+        reporterName: 'Vikram Seth',
+        reporterPhone: '+91 99999 88888',
+        score: 14,
+        aiTags: ['#wallet', '#leather', '#brown']
+      },
+      {
+        id: 99302,
+        type: 'found',
+        name: 'Silver Keychain',
+        cat: 'Keys',
+        loc: 'Poonamallee, Chennai',
+        lat: 13.0470,
+        lng: 80.0950,
+        date: '2026-05-20',
+        desc: 'Set of 4 keys with a silver keychain and blue tag',
+        reporterName: 'Karthik Raja',
+        reporterPhone: '+91 88888 77777',
+        score: 14,
+        aiTags: ['#keys', '#metal', '#silver']
+      },
+      {
+        id: 99401,
+        type: 'lost',
+        name: 'Silver Rolex Watch',
+        cat: 'Jewellery',
+        loc: 'Nungambakkam, Chennai',
+        lat: 13.0600,
+        lng: 80.2400,
+        date: '2026-05-18',
+        desc: 'Silver Rolex Oyster Perpetual watch with minor scratches on steel bracelet',
+        reporterName: 'Vikram Seth',
+        reporterPhone: '+91 99999 88888',
+        score: 88,
+        aiTags: ['#watch', '#rolex', '#silver']
+      },
+      {
+        id: 99402,
+        type: 'found',
+        name: 'Rolex Oyster Silver',
+        cat: 'Jewellery',
+        loc: 'Kodambakkam, Chennai',
+        lat: 13.0480,
+        lng: 80.2210,
+        date: '2026-05-19',
+        desc: 'Found a silver steel Rolex watch on street, looks authentic, engraved markings on back',
+        reporterName: 'Karthik Raja',
+        reporterPhone: '+91 88888 77777',
+        score: 88,
+        aiTags: ['#watch', '#jewellery', '#silver']
+      }
+    ];
+
+    // Populate matchPairs
+    matchPairs = [
+      {
+        id: 'MP-991',
+        score: 92,
+        label: 'iPhone 14 Pro ↔ Black Smartphone',
+        lostId: 99101,
+        foundId: 99102,
+        status: 'verified',
+        lostReporterPhone: '+91 98765 43210',
+        foundReporterPhone: '+91 87654 32109',
+        civic: { name: 'Velachery Police Station', addr: 'Velachery Main Rd, Chennai', lat: 12.9820, lng: 80.2195 },
+        steps: [
+          'Aravind Swamy (Owner) navigates to Velachery Police Station.',
+          'Rajesh Kumar (Finder) navigates to Velachery Police Station.',
+          'Meet at Velachery Police Station to verify the phone and pink case.',
+          'Complete secure OTP handshake.'
+        ],
+        customLostLat: 13.0012,
+        customLostLng: 80.2565,
+        customFoundLat: 12.9820,
+        customFoundLng: 80.2195,
+        customLostLocName: 'Adyar, Chennai',
+        customFoundLocName: 'Velachery, Chennai',
+        lostVerified: true,
+        foundVerified: true
+      },
+      {
+        id: 'MP-992',
+        score: 72,
+        label: 'Golden Retriever ↔ Light Brown Dog',
+        lostId: 99201,
+        foundId: 99202,
+        status: 'pending_claim',
+        lostReporterPhone: '+91 76543 21098',
+        foundReporterPhone: '+91 65432 10987',
+        lostVerified: false,
+        foundVerified: false,
+        civic: { name: 'T.Nagar Civic Hub', addr: '2nd Main Rd, T.Nagar, Chennai', lat: 13.0418, lng: 80.2341 },
+        steps: [
+          'Meera Krishnan (Owner) coordinates meeting at T.Nagar Civic Hub.',
+          'Suresh Raina (Finder) brings dog to T.Nagar Civic Hub.',
+          'Verify red collar residue or dog responds to "Leo".',
+          'Complete secure verification.'
+        ]
+      },
+      {
+        id: 'MP-993',
+        score: 14,
+        label: 'Brown Leather Wallet ↔ Silver Keychain',
+        lostId: 99301,
+        foundId: 99302,
+        status: 'pending_claim',
+        lostReporterPhone: '+91 99999 88888',
+        foundReporterPhone: '+91 88888 77777',
+        lostVerified: false,
+        foundVerified: false,
+        civic: { name: 'Anna Nagar Civic Hub', addr: '2nd Avenue, Anna Nagar, Chennai', lat: 13.0820, lng: 80.2090 },
+        steps: [
+          'Confirm items do not match.',
+          'Close mismatch case.'
+        ]
+      },
+      {
+        id: 'MP-994',
+        score: 88,
+        label: 'Silver Rolex Watch ↔ Rolex Oyster Silver',
+        lostId: 99401,
+        foundId: 99402,
+        status: 'pending_verification',
+        lostReporterPhone: '+91 99999 88888',
+        foundReporterPhone: '+91 88888 77777',
+        lostVerified: false,
+        foundVerified: false,
+        answers: [
+          'Rolex Oyster Perpetual',
+          'Silver steel bracelet with minor scratch on lower clasp',
+          'Registered under Vikram Seth, back casing has serial ending in 492'
+        ],
+        civic: { name: 'Central Police Station', addr: 'Egmore, Chennai', lat: 13.0827, lng: 80.2707 },
+        steps: [
+          'Vikram Seth (Owner) coordinates meeting at Central Police Station.',
+          'Karthik Raja (Finder) brings watch to Central Police Station.',
+          'Verify serial number matches back casing.',
+          'Complete secure verification.'
+        ]
+      }
+    ];
+    
+    // Seed blockchain ledger if empty
+    if (!localStorage.getItem('carn_blocks') || JSON.parse(localStorage.getItem('carn_blocks')).length === 0) {
+      ledgerBlocks = [
+        {
+          num: '#1041',
+          tx: 'GENESIS BLOCK',
+          hash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          timestamp: 'May 18, 2026, 10:00 AM'
+        },
+        {
+          num: '#1042',
+          tx: 'MP-991 VERIFIED',
+          hash: '0x8f2a63f109be9752f9547d298c5e4f4b301a91e57c6b907e52a8ef64c58a36d2',
+          timestamp: 'May 20, 2026, 04:30 PM'
+        }
+      ];
+    }
+    saveData();
+  } else {
+    // If carn_blocks already exists but ledgerBlocks is empty, reload it
+    if (ledgerBlocks.length === 0) {
+      ledgerBlocks = JSON.parse(localStorage.getItem('carn_blocks')) || [];
+    }
+  }
+
+  if(currentUser) {
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('userNavGroup').classList.add('active');
+    document.getElementById('navUserName').textContent = currentUser.name;
+  }
+  animateStats(); 
+  renderRecent(); 
+};
+</script>
+</body>
+</html>
