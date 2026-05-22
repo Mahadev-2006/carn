@@ -1,6 +1,6 @@
-# 🛡️ Civic Asset Recovery Network (CARN 2) — Premium P2P Edition
+# 🛡️ Civic Asset Recovery Network (CARN) — Premium P2P Edition
 
-Welcome to **CARN 2**, the next-generation premium iteration of the Civic Asset Recovery Network. This version introduces **Strict Peer-to-Peer Privacy Firewalls**, a fully **Decentralized Proof-of-Authority (PoA) Ledger**, and a **Local Ollama LLM Cognitive Auditing Engine** powered exclusively by the `llama3.2:1b` model.
+Welcome to CARN, the next-generation premium iteration of the Civic Asset Recovery Network. This version introduces **Strict Peer-to-Peer Privacy Firewalls**, a fully **Decentralized Proof-of-Authority (PoA) Ledger**, and a **Local Ollama LLM Cognitive Auditing Engine** powered exclusively by the `llama3.2:1b` model.
 
 ---
 
@@ -30,7 +30,7 @@ Welcome to **CARN 2**, the next-generation premium iteration of the Civic Asset 
 ## 🛠️ Quick Start Guide
 
 ### 1. Open the Web App
-Because CARN 2 is built as a highly responsive, glassmorphic client-side application, you can run it in two ways:
+Because CARN is built as a highly responsive, glassmorphic client-side application, you can run it in two ways:
 
 #### Option A: Direct Local Host (Recommended)
 This runs a lightweight local server, which allows the browser to easily handle GPS coordinates and Ollama CORS calls:
