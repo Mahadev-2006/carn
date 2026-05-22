@@ -1900,3 +1900,613 @@ function openQuorumReview(pairId) {
       </div>
     </div>
     
+<!-- Claimant Responses -->
+    <div class="review-block" style="margin-bottom: 1.25rem; border-left: 3px solid var(--warning);">
+      <div class="review-title" style="color:var(--warning);">📝 Secure Ownership Answers (Claimant)</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:13px;">
+        <div><strong style="color:var(--muted);">Answer 1:</strong> <span style="color:var(--text); font-weight:500;">${answers[0]}</span></div>
+        <div><strong style="color:var(--muted);">Answer 2:</strong> <span style="color:var(--text); font-weight:500;">${answers[1]}</span></div>
+        <div><strong style="color:var(--muted);">Answer 3:</strong> <span style="color:var(--text); font-weight:500;">${answers[2]}</span></div>
+      </div>
+    </div>
+    
+    <!-- AI Fusion Confidence Projections -->
+    <div class="review-block" style="margin-bottom: 1.5rem; border-left: 3px solid var(--info);">
+      <div class="review-title" style="color:var(--info);">🧠 TensorFlow AI Matching Signal Breakdown</div>
+      <div class="review-row"><span class="review-key">Visual CNN Similarity</span><span class="review-val" style="color:var(--accent); font-weight:bold;">${sim.image}%</span></div>
+      <div class="review-row"><span class="review-key">NLP Description Cosine</span><span class="review-val" style="color:var(--accent); font-weight:bold;">${sim.text}%</span></div>
+      <div class="review-row"><span class="review-key">GPS Proximity Proximity</span><span class="review-val" style="color:var(--info);">${sim.distance.toFixed(2)} km apart (${sim.location}% match)</span></div>
+      <div class="review-row"><span class="review-key">Final Integrated Confidence</span><span class="review-val" style="color:var(--accent); font-weight:bold; font-size:14px;">${p.score}% Match</span></div>
+    </div>
+    
+    <div style="display:flex; gap:0.75rem;">
+      <button class="btn btn-primary" style="flex:1;" onclick="mineConsensusBlock('${p.id}')">🟢 Approve &amp; Mint Block</button>
+      <button class="btn btn-danger" onclick="dismissQuorumClaim('${p.id}')">🔴 Reject Claim</button>
+    </div>
+  `;
+  
+  openModal('quorumModal');
+}
+
+function mineConsensusBlock(pairId) {
+  const p = matchPairs.find(x => x.id === pairId);
+  if (!p) return;
+  
+  const isOwner = currentUser && isSamePhone(currentUser.phone, p.lostReporterPhone);
+  const isFinder = currentUser && isSamePhone(currentUser.phone, p.foundReporterPhone);
+  
+  if (!isOwner && !isFinder) {
+    showToast('Unauthorized to sign this consensus block.', 'error');
+    return;
+  }
+  
+  if (isOwner) {
+    p.lostVerified = true;
+  }
+  if (isFinder) {
+    p.foundVerified = true;
+  }
+  saveData();
+  
+  if (p.lostVerified && p.foundVerified) {
+    // Set up SHA-256 Hash mock
+    const blockHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+    
+    // Replace content with dynamic mining pipeline simulation
+    document.getElementById('quorumContent').innerHTML = `
+      <div class="mining-pipeline-overlay">
+        <div class="mining-spinner" id="miningSpinner"></div>
+        <h3 style="font-family:var(--font-head); font-weight:700; color:var(--text); font-size:1.15rem; margin-bottom:4px;" id="miningStatusTitle">Initializing Mining Pipeline</h3>
+        <p style="color:var(--muted); font-size:13px;" id="miningStatusSubtitle">Connecting to decentralized validator network...</p>
+        
+        <div class="progress-bar" style="width:100%; margin-top:1.25rem; height:8px; margin-bottom:0;"><div class="progress-fill" id="miningProgressBar" style="width:0%; background:var(--accent);"></div></div>
+        
+        <div class="mining-log-box" id="miningLogs">
+          <div>[SYSTEM] consensus core initialized.</div>
+        </div>
+      </div>
+    `;
+    
+    const progressBar = document.getElementById('miningProgressBar');
+    const logs = document.getElementById('miningLogs');
+    const statusTitle = document.getElementById('miningStatusTitle');
+    const statusSubtitle = document.getElementById('miningStatusSubtitle');
+    
+    // Phase 1: Hashing
+    setTimeout(() => {
+      statusTitle.textContent = "Hashing Transaction Data";
+      statusSubtitle.textContent = "Computing cryptographic SHA-256 state tree...";
+      progressBar.style.width = "30%";
+      logs.innerHTML += `<div class="mining-log-entry">> SHA-256 block hash generated: ${blockHash.slice(0, 16)}...</div>`;
+      logs.innerHTML += `<div class="mining-log-entry">> Compiled Claim ID: ${p.id} data block.</div>`;
+      logs.scrollTop = logs.scrollHeight;
+    }, 700);
+    
+    // Phase 2: Peer broadcasting
+    setTimeout(() => {
+      statusTitle.textContent = "Broadcasting to Quorum";
+      statusSubtitle.textContent = "Requesting consensus validator signatures...";
+      progressBar.style.width = "65%";
+      logs.innerHTML += `<div class="mining-log-entry">> Tx broadcasted to Chennai-Sub-Net...</div>`;
+      logs.innerHTML += `<div class="mining-log-success">> Node AnnaNagar-3: APPROVED (Reputation 99.8%)</div>`;
+      logs.innerHTML += `<div class="mining-log-success">> Node Adyar-12: APPROVED (Reputation 99.9%)</div>`;
+      logs.innerHTML += `<div class="mining-log-success">> Node Velachery-2: APPROVED (Reputation 99.7%)</div>`;
+      logs.innerHTML += `<div class="mining-log-entry">> Quorum consensus reached (100% agreement).</div>`;
+      logs.scrollTop = logs.scrollHeight;
+    }, 1400);
+    
+    // Phase 3: Mining commit
+    setTimeout(() => {
+      statusTitle.textContent = "Mining New Block";
+      statusSubtitle.textContent = "Sealing transaction on public municipal ledger...";
+      progressBar.style.width = "90%";
+      logs.innerHTML += `<div class="mining-log-entry">> Injecting block into local Municipal Node...</div>`;
+      logs.innerHTML += `<div class="mining-log-success">> Proof-of-Authority verification complete.</div>`;
+      logs.scrollTop = logs.scrollHeight;
+    }, 2100);
+    
+    // Phase 4: Mined and Completed
+    setTimeout(() => {
+      statusTitle.textContent = "Block Mined & Committed!";
+      statusTitle.style.color = "var(--accent)";
+      statusSubtitle.textContent = "Transaction permanently sealed on-chain.";
+      progressBar.style.width = "100%";
+      
+      // Stop spinner animation and turn green
+      const spinner = document.getElementById('miningSpinner');
+      if (spinner) {
+        spinner.style.animation = "none";
+        spinner.style.border = "3px solid var(--accent)";
+        spinner.innerHTML = `<span style="font-size:2.5rem; display:flex; align-items:center; justify-content:center; height:100%; color:var(--accent);">✓</span>`;
+      }
+      
+      logs.innerHTML += `<div class="mining-log-success">> Block Mined Successfully on-chain!</div>`;
+      logs.scrollTop = logs.scrollHeight;
+      
+      // Commit logic
+      p.status = 'verified';
+      
+      // Generate new block
+      const blockNum = '#' + (1040 + ledgerBlocks.length + 1);
+      const newBlock = {
+        num: blockNum,
+        tx: `${p.id} VERIFIED`,
+        hash: blockHash,
+        timestamp: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      };
+      ledgerBlocks.push(newBlock);
+      saveData();
+      
+      // Trigger toast
+      showToast(`✅ Consensus Mined: Block ${blockNum} Committed!`, 'success');
+    }, 2800);
+    
+    // Close Modal and Re-render Verify View
+    setTimeout(() => {
+      closeModal('quorumModal');
+      renderVerify();
+      
+      // Scroll to the newly mined block with smooth slide animation
+      const finalBlockNum = '#' + (1040 + ledgerBlocks.length);
+      const blockElementId = `block_${finalBlockNum.replace('#', '')}`;
+      const blockEl = document.getElementById(blockElementId);
+      if (blockEl) {
+        blockEl.classList.add('block-newly-mined');
+        // Scroll horizontal chain container to the right
+        const chainScroll = document.getElementById('chainView');
+        if (chainScroll) chainScroll.scrollLeft = chainScroll.scrollWidth;
+      }
+      
+      // Check if the current logged-in user is one of the reporters in this match pair
+      const isOwnerNow = currentUser && isSamePhone(currentUser.phone, p.lostReporterPhone);
+      const isFinderNow = currentUser && isSamePhone(currentUser.phone, p.foundReporterPhone);
+      
+      if (isOwnerNow || isFinderNow) {
+        setTimeout(() => {
+          openLocationPrompt(p.id);
+        }, 1200);
+      }
+    }, 3500);
+  } else {
+    // Only one has verified
+    setTimeout(() => {
+      closeModal('quorumModal');
+      renderVerify();
+      showToast(`✍️ Signature registered! Awaiting counterpart's signature.`, 'success');
+    }, 400);
+  }
+}
+
+function dismissQuorumClaim(pairId) {
+  const p = matchPairs.find(x => x.id === pairId);
+  if (!p) return;
+  
+  p.status = 'pending_claim';
+  p.lostVerified = false;
+  p.foundVerified = false;
+  if (p.answers) delete p.answers; // reset answers
+  saveData();
+  closeModal('quorumModal');
+  renderVerify();
+  showToast('🔴 Consensus rejection cast. Match sent back for review.', 'error');
+}
+
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+function renderNotifs() {
+  document.getElementById('notifList').innerHTML = `
+    <div class="notif-item notif-unread">
+      <div class="notif-icon">🤖</div>
+      <div>
+        <div class="notif-title">System Active</div>
+        <div class="notif-sub">Decentralized matching network is online and waiting for reports.</div>
+        <div class="notif-time">Just now</div>
+      </div>
+    </div>`;
+}
+
+// ─── REPORT & DYNAMIC MATCHING ENGINE ─────────────────────────────────────────
+function openModal(id, type) {
+  if(type) { currentType = type; switchReportType(type); }
+  document.getElementById(id).classList.add('open');
+  if(id === 'reportModal') document.getElementById('itemDate').value = new Date().toISOString().split('T')[0];
+}
+function closeModal(id) { 
+  document.getElementById(id).classList.remove('open'); 
+  if(id === 'reportModal') resetUpload(); 
+  if(id === 'loginModal') resetLogin();
+}
+function switchReportType(t) {
+  currentType = t;
+  document.getElementById('tabLost').classList.toggle('active', t==='lost');
+  document.getElementById('tabFound').classList.toggle('active', t==='found');
+  document.getElementById('reportTitle').textContent = t==='lost' ? '🔴 Report Lost Item' : '🟢 Report Found Item';
+}
+
+function simulateUpload() {
+  if(uploadDone) return;
+  document.getElementById('uploadBar').style.display='block';
+  document.getElementById('uploadLabel').textContent='Uploading image locally…';
+  let p=0;
+  const t = setInterval(() => {
+    p+=10; document.getElementById('uploadFill').style.width=p+'%';
+    if(p>=100) {
+      clearInterval(t);
+      uploadDone=true;
+      document.getElementById('uploadIcon').textContent='✅';
+      document.getElementById('uploadLabel').textContent='Image Ready!';
+      document.getElementById('edgeAiBtn').style.display = 'inline-flex';
+    }
+  }, 80);
+}
+
+function runEdgeAI() {
+  document.getElementById('edgeAiBtn').style.display = 'none';
+  document.getElementById('aiMatchPanel').style.display='block';
+  document.getElementById('aiMatchResult').innerHTML = '🧠 TensorFlow.js / MobileNet extracting visual features...';
+  
+  setTimeout(() => {
+    edgeAITags = ['#leather', '#wallet', '#brown'];
+    const tagsHtml = edgeAITags.map(tag => `<span class="tag tag-ai">${tag}</span>`).join('');
+    document.getElementById('aiTagsContainer').innerHTML = tagsHtml;
+    
+    document.getElementById('aiMatchResult').innerHTML = '🔍 Visual embeddings generated. Cross-referencing local ledger...';
+  }, 1500);
+}
+
+function resetUpload() {
+  uploadDone=false;
+  edgeAITags = [];
+  document.getElementById('uploadIcon').textContent='📷';
+  document.getElementById('uploadLabel').textContent='Click to upload image';
+  document.getElementById('uploadFill').style.width='0%';
+  document.getElementById('uploadBar').style.display='none';
+  document.getElementById('aiMatchPanel').style.display='none';
+  document.getElementById('edgeAiBtn').style.display='none';
+  if(document.getElementById('aiTagsContainer')) { document.getElementById('aiTagsContainer').innerHTML=''; }
+}
+
+function submitReport() {
+  const name = document.getElementById('itemName').value.trim();
+  if(!name) { showToast('Please enter an item name', 'error'); return; }
+  
+  // 1. Create New Item
+  const newItem = {
+    id: items.length + 1, 
+    type: currentType,
+    name, 
+    cat: document.getElementById('itemCat').value,
+    loc: document.getElementById('itemLoc').value || 'Chennai',
+    lat: 13.0 + Math.random()*0.15, 
+    lng: 80.18 + Math.random()*0.15,
+    date: document.getElementById('itemDate').value,
+    desc: document.getElementById('itemDesc').value || 'No description',
+    reporterName: currentUser.name,
+    reporterPhone: currentUser.phone,
+    score: 0,
+    aiTags: edgeAITags.length > 0 ? edgeAITags : null
+  };
+
+  // 2. CROSS-LEDGER MATCHING ALGORITHM (Lost vs Found)
+  let bestMatch = null;
+  let highestScore = 0;
+
+  items.forEach(existingItem => {
+    // Only compare Lost against Found, and MUST be a different user
+    if (existingItem.type !== newItem.type && !isSamePhone(existingItem.reporterPhone, newItem.reporterPhone)) {
+      let currentScore = 0;
+      
+      if(existingItem.cat === newItem.cat) currentScore += 45; 
+      if(existingItem.name.toLowerCase().includes(newItem.name.toLowerCase().split(' ')[0]) || 
+         newItem.name.toLowerCase().includes(existingItem.name.toLowerCase().split(' ')[0])) {
+         currentScore += 35; 
+      }
+      if(uploadDone) currentScore += 15; 
+      
+      if(currentScore > highestScore) {
+        highestScore = currentScore;
+        bestMatch = existingItem;
+      }
+    }
+  });
+
+  // Save the item to DB
+  newItem.score = highestScore;
+  items.unshift(newItem);
+  saveData();
+  closeModal('reportModal');
+  
+  // 3. SECURE MATCH RESOLUTION
+  if (bestMatch && highestScore >= 80) {
+    const pairId = 'MP-' + Math.floor(Math.random()*1000);
+    const lostItem = newItem.type === 'lost' ? newItem : bestMatch;
+    const foundItem = newItem.type === 'found' ? newItem : bestMatch;
+    
+    // Push the pending match pair to ledger
+    const newPair = {
+      id: pairId,
+      score: highestScore,
+      label: `${lostItem.name} ↔ ${foundItem.name}`,
+      lostId: lostItem.id,
+      foundId: foundItem.id,
+      status: 'pending_claim', // CRITICAL: Route and info are locked
+      lostReporterPhone: lostItem.reporterPhone,
+      foundReporterPhone: foundItem.reporterPhone,
+      lostVerified: false,
+      foundVerified: false,
+      civic: { name:'Central Civic Hub', addr:'Midpoint Safehouse, Chennai', lat: (lostItem.lat+foundItem.lat)/2, lng: (lostItem.lng+foundItem.lng)/2 },
+      steps: [
+        `${lostItem.reporterName || 'Owner'} navigates to safehouse.`,
+        `${foundItem.reporterName || 'Finder'} navigates to safehouse.`,
+        `Meet at Central Civic Hub to verify the item.`,
+        `Complete secure OTP handshake.`
+      ]
+    };
+    matchPairs.push(newPair);
+    saveData();
+    
+    // Show appropriate Modal based on who I am right now
+    if (newItem.type === 'lost') {
+      // I just reported lost -> I am the Owner. I must complete claim!
+      showPendingClaimModal(newPair, foundItem);
+    } else {
+      // I just reported found -> I am the Finder. Must wait for Owner.
+      showFinderWaitModal(newPair, lostItem);
+    }
+  } else {
+    showToast(`✅ ${name} reported securely on-chain!`, 'success');
+  }
+
+  // Clean form
+  document.getElementById('itemName').value='';
+  document.getElementById('itemDesc').value='';
+  document.getElementById('itemLoc').value='';
+  document.getElementById('itemEmail').value='';
+  animateStats(); renderRecent();
+}
+
+// ─── DYNAMIC MATCH NOTIFICATIONS (SECURITY FIREWALL) ──────────────────────
+
+function showPendingClaimModal(pair, otherItem) {
+  document.getElementById('matchModalTitle').innerHTML = '🚨 High Probability Match Found!';
+  document.getElementById('dynamicMatchContent').innerHTML = `
+    <div style="font-size:3rem; text-align:center; margin-bottom:10px;">🛡️</div>
+    <p style="color:var(--text); font-size: 15px; margin-bottom: 10px;">Someone has reported finding your <strong>${otherItem.name}</strong> with a match probability of <span style="color:var(--accent); font-weight:bold;">${pair.score}%</span>!</p>
+    
+    <div style="background: rgba(255,107,74,0.1); border: 1px solid var(--danger); border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+      <p style="font-size:13px; color:var(--text); margin-bottom:0;"><strong>Security Firewall Active</strong><br/>To protect user privacy and prevent fraud, contact details and routing information are temporarily locked.</p>
+    </div>
+    <p style="font-size:12px; color:var(--muted);">You must complete the Secure Claim Questionnaire to prove ownership. Once verified, you will instantly receive the finder's contact details and the route to the pickup point.</p>
+  `;
+  document.getElementById('dynamicMatchActions').innerHTML = `
+    <button class="btn btn-warning" style="width:100%;" onclick="closeModal('dynamicMatchModal'); openClaim(${pair.lostId})">📝 Start Secure Claim</button>
+  `;
+  document.getElementById('dynamicMatchModal').classList.add('open');
+}
+
+function showFinderWaitModal(pair, otherItem) {
+  document.getElementById('matchModalTitle').innerHTML = '✅ Match Registered!';
+  document.getElementById('dynamicMatchContent').innerHTML = `
+    <div style="font-size:3rem; text-align:center; margin-bottom:10px;">⏳</div>
+    <p style="color:var(--text); font-size: 15px; margin-bottom: 10px;">Great news! The item you found matches a lost report for <strong>${otherItem.name}</strong> (<span style="color:var(--accent); font-weight:bold;">${pair.score}%</span> match).</p>
+    
+    <div style="background: rgba(74,158,255,0.1); border: 1px solid var(--info); border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+      <p style="font-size:13px; color:var(--text); margin-bottom:0;"><strong>Awaiting Owner Verification</strong><br/>The suspected owner has been notified to complete a security claim. For your privacy, your location and contact details remain hidden until they pass the verification.</p>
+    </div>
+    <p style="font-size:12px; color:var(--muted);">Check your dashboard later. Once verified, route mapping will unlock.</p>
+  `;
+  document.getElementById('dynamicMatchActions').innerHTML = `
+    <button class="btn btn-outline" style="width:100%;" onclick="closeModal('dynamicMatchModal')">Understood</button>
+  `;
+  document.getElementById('dynamicMatchModal').classList.add('open');
+}
+
+// ─── CLAIM MODAL & VERIFICATION FLOW ──────────────────────────────────────
+function openClaim(itemId) {
+  const item = items.find(i=>i.id===itemId);
+  if(!item) return;
+
+  // Strict Security Firewall: Only the owner who reported the lost item can answer the questionnaire
+  if (!currentUser || !isSamePhone(item.reporterPhone, currentUser.phone) || item.type !== 'lost') {
+    showToast('Unauthorized: Only the owner who reported this lost item can answer the questionnaire.', 'error');
+    return;
+  }
+  
+  let questions = [];
+  switch(item.cat) {
+    case 'Electronics':
+      questions = [
+        'Q1: What is the brand and model name of the device?',
+        'Q2: What is the lock screen wallpaper or device condition (e.g. space grey, blue case, cracked screen)?',
+        'Q3: Are there any unique operating system details, logged-in accounts, or serial numbers?'
+      ];
+      break;
+    case 'Bags & Wallets':
+      questions = [
+        'Q1: What color is the brand logo or pattern on the outside?',
+        'Q2: What exact contents (cards, coins, specific keys) were inside when lost?',
+        'Q3: What brand name and fabric/material is the item?'
+      ];
+      break;
+    case 'Keys':
+      questions = [
+        'Q1: How many keys are on the ring and what are they for (e.g. car, house, locker)?',
+        'Q2: What does the keychain accessory look like (color, text, logo)?',
+        'Q3: Are there any specific brand names stamped on the keys (e.g. Yale, Link)?'
+      ];
+      break;
+    case 'Clothing':
+      questions = [
+        'Q1: What is the exact brand name and size labeled on the item?',
+        'Q2: What is the fabric type, color combination, and pattern?',
+        'Q3: Are there any specific stains, wear marks, or custom alterations?'
+      ];
+      break;
+    case 'Jewellery':
+      questions = [
+        'Q1: What material is it made of (e.g. 18k gold, sterling silver) and does it have custom markings?',
+        'Q2: What gemstones or engravings are present on the piece?',
+        'Q3: What type of clasp, chain style, or setting is used?'
+      ];
+      break;
+    case 'Documents':
+      questions = [
+        'Q1: What is the full name, ID number, or registry number printed on the document?',
+        'Q2: Who is the issuing authority and what is the approximate issue or expiration date?',
+        'Q3: What is the color of the document folder, envelope, or card holder?'
+      ];
+      break;
+    case 'Pets':
+      questions = [
+        'Q1: What is the pet\'s name and what specific vocal commands does it respond to?',
+        'Q2: What color and brand is the collar or harness?',
+        'Q3: Are there any unique physical spots, microchip numbers, or distinct markings?'
+      ];
+      break;
+    default:
+      questions = [
+        'Q1: What color is it and what are its physical dimensions?',
+        'Q2: Are there any special distinguishing marks, scratches, or defects on the item?',
+        'Q3: Can you describe any packaging, receipts, or purchase details associated with the item?'
+      ];
+  }
+
+  document.getElementById('claimContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1rem;background:var(--surface);border-radius:10px">
+      <div style="font-size:2.5rem">${emojis[item.cat]||'📦'}</div>
+      <div><div style="font-weight:600;font-size:1rem">${item.name}</div>
+      <div style="font-size:13px;color:var(--muted)">${item.loc}</div>
+      <span class="tag tag-${item.type}" style="margin-top:4px;display:inline-block">${item.type}</span></div>
+    </div>
+    <div class="ai-panel" style="margin-bottom:1.25rem">
+      <div class="ai-badge"><div class="pulse"></div> Secure Claim Identity Firewall</div>
+      <p style="font-size:13px;margin-top:6px;color:var(--muted)">Pass this 3-step physical ownership test to unlock contact details and location routing for the found item.</p>
+    </div>
+    ${questions.map((q,i)=>`
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>${q}</label>
+        <input type="text" placeholder="Type your answer strictly here..." />
+      </div>`).join('')}
+    <div style="display:flex;gap:0.75rem;margin-top:1rem">
+      <button class="btn btn-primary" style="flex:1" onclick="submitClaim(${item.id})">Submit Secure Claim</button>
+      <button class="btn btn-outline" onclick="closeModal('claimModal')">Cancel</button>
+    </div>`;
+  document.getElementById('claimModal').classList.add('open');
+}
+
+function submitClaim(itemId) {
+  const item = items.find(i=>i.id===itemId);
+  if (!item) return;
+
+  // Strict Security Firewall: Only the owner who reported the lost item can submit this claim
+  if (!currentUser || !isSamePhone(item.reporterPhone, currentUser.phone) || item.type !== 'lost') {
+    showToast('Unauthorized: Only the owner who reported this lost item can submit a claim.', 'error');
+    closeModal('claimModal');
+    return;
+  }
+
+  const inputs = document.querySelectorAll('#claimContent input');
+  const ans = Array.from(inputs).map(i => i.value.trim() || 'No detail provided');
+
+  closeModal('claimModal');
+  
+  // Find the pending match pair for this item
+  const pair = matchPairs.find(p => p.lostId === itemId || p.foundId === itemId);
+  if(pair) {
+    pair.answers = ans;
+    pair.lostVerified = false;
+    pair.foundVerified = false;
+    pair.status = 'pending_verification';
+    saveData();
+    showToast('🗳️ Secure claim answers submitted! Awaiting owner & finder signature verification.', 'success');
+    
+    // Redirect claimant to verification console
+    goPage('verify');
+  }
+}
+
+let gpsCoords = null;
+
+function getUserGPSLocation() {
+  const statusEl = document.getElementById('gpsStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = '🛰️ Requesting GPS permission...';
+  
+  if (!navigator.geolocation) {
+    statusEl.textContent = '❌ Geolocation is not supported by your browser';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      gpsCoords = { lat, lng };
+      
+      document.getElementById('userLocInput').value = `GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      statusEl.textContent = '✅ GPS Coordinates obtained successfully!';
+      statusEl.style.color = 'var(--accent)';
+    },
+    (error) => {
+      statusEl.textContent = `❌ GPS Access Denied: ${error.message}`;
+      statusEl.style.color = 'var(--danger)';
+    },
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
+}
+
+function openLocationPrompt(pairId) {
+  const pair = matchPairs.find(p => p.id === pairId);
+  if (!pair) return;
+
+  // Strict Security Firewall: Only authorized participants of this match can set up coordinates
+  const isOwner = currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone);
+  const isFinder = currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone);
+  if (!isOwner && !isFinder) {
+    showToast('Unauthorized: You are not a participant in this match.', 'error');
+    return;
+  }
+  
+  document.getElementById('locPromptPairId').value = pairId;
+  if(document.getElementById('gpsStatus')) document.getElementById('gpsStatus').style.display = 'none';
+  gpsCoords = null; // reset GPS cache
+  
+  const lostItem = items.find(i => i.id === pair.lostId);
+  const foundItem = items.find(i => i.id === pair.foundId);
+  if (!lostItem || !foundItem) return;
+  
+  if (isOwner) {
+    document.getElementById('locPromptTitle').textContent = '📍 Owner Meetup Setup';
+    document.getElementById('userLocInputLabel').textContent = 'Enter Your Starting Location (Owner) *';
+    document.getElementById('userLocInput').value = 'Current GPS Location';
+    
+    document.getElementById('otherLocInputLabel').textContent = 'Finder\'s Reported Location (Auto-Filled)';
+    document.getElementById('otherLocInput').value = foundItem.loc || 'Velachery, Chennai';
+  } else {
+    document.getElementById('locPromptTitle').textContent = '📍 Finder Meetup Setup';
+    document.getElementById('userLocInputLabel').textContent = 'Enter Your Starting Location (Finder) *';
+    document.getElementById('userLocInput').value = 'Current GPS Location';
+    
+    document.getElementById('otherLocInputLabel').textContent = 'Owner\'s Lost Location (Auto-Filled)';
+    document.getElementById('otherLocInput').value = lostItem.loc || 'Adyar, Chennai';
+  }
+  
+  document.getElementById('locationPromptModal').classList.add('open');
+}
+
+function submitCustomLocations() {
+  const pairId = document.getElementById('locPromptPairId').value;
+  const userLoc = document.getElementById('userLocInput').value.trim() || 'My Starting Point';
+  const otherLoc = document.getElementById('otherLocInput').value.trim() || 'Other Starting Point';
+
+  const pair = matchPairs.find(p => p.id === pairId);
+  if(pair) {
+    // Strict Security Firewall: Only authorized participants can submit location coordinates
+    const isOwner = currentUser && isSamePhone(currentUser.phone, pair.lostReporterPhone);
+    const isFinder = currentUser && isSamePhone(currentUser.phone, pair.foundReporterPhone);
+    if (!isOwner && !isFinder) {
+      showToast('Unauthorized: You are not a participant in this match.', 'error');
+      closeModal('locationPromptModal');
+      return;
+    }
