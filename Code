@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CARN – Civic Asset Recovery Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --accent: #00C896;
+    --accent2: #FF6B4A;
+    --bg: #0A0F0D;
+    --surface: #111712;
+    --card: #161e18;
+    --border: rgba(0,200,150,0.15);
+    --text: #E8F0EB;
+    --muted: #7A9080;
+    --danger: #FF6B4A;
+    --info: #4A9EFF;
+    --warning: #FFB84A;
+    --radius: 12px;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  /* NAV */
+  nav { background: rgba(10,15,13,0.95); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; height: 60px; position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(8px); }
+  .logo { font-family: var(--font-head); font-size: 1.3rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--text); }
+  .nav-links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .nav-btn { background: none; border: none; color: var(--muted); font-family: var(--font-body); font-size: 14px; cursor: pointer; padding: 6px 14px; border-radius: 8px; transition: all 0.2s; }
+  .nav-btn:hover, .nav-btn.active { background: rgba(0,200,150,0.1); color: var(--accent); }
+  .nav-cta { background: var(--accent); color: #0A0F0D; border: none; font-family: var(--font-body); font-weight: 600; font-size: 14px; cursor: pointer; padding: 8px 18px; border-radius: 8px; transition: filter 0.2s; }
+  .nav-cta:hover { filter: brightness(1.1); }
+  .nav-cta-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); font-family: var(--font-body); font-weight: 600; font-size: 14px; cursor: pointer; padding: 7px 17px; border-radius: 8px; transition: all 0.2s; margin-right: 10px; }
+  .nav-cta-outline:hover { background: rgba(0,200,150,0.1); }
+  
+  .nav-user { display: none; align-items: center; gap: 10px; margin-right: 10px; }
+  .nav-user.active { display: flex; }
+
+  /* PAGES */
+  .page { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero { text-align: center; padding: 4rem 1rem 3rem; }
+  .hero-badge { display: inline-block; background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.3); color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 4px 14px; border-radius: 99px; margin-bottom: 1.5rem; }
+  .hero h1 { font-family: var(--font-head); font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -2px; margin-bottom: 1rem; }
+  .hero h1 .hl { color: var(--accent); }
+  .hero p { color: var(--muted); max-width: 520px; margin: 0 auto 2rem; font-size: 1.05rem; }
+  .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: 10px; font-family: var(--font-body); font-weight: 500; font-size: 15px; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #0A0F0D; }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,200,150,0.05); }
+  .btn-danger { background: rgba(255,107,74,0.15); border: 1px solid rgba(255,107,74,0.3); color: var(--danger); }
+  .btn-danger:hover { background: rgba(255,107,74,0.25); }
+  .btn-info { background: rgba(74,158,255,0.15); border: 1px solid rgba(74,158,255,0.3); color: var(--info); }
+  .btn-info:hover { background: rgba(74,158,255,0.25); }
+  .btn-warning { background: rgba(255,184,74,0.15); border: 1px solid rgba(255,184,74,0.3); color: var(--warning); }
+  .btn-warning:hover { background: rgba(255,184,74,0.25); }
+
+  /* STATS ROW */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 2rem 0; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; text-align: center; }
+  .stat-num { font-family: var(--font-head); font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* SECTION */
+  .section-title { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; letter-spacing: -0.5px; }
+  .section-title span { color: var(--accent); }
+
+  /* CARDS GRID */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .item-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: all 0.2s; cursor: pointer; }
+  .item-card:hover { border-color: rgba(0,200,150,0.4); transform: translateY(-2px); }
+  .item-card-img { width: 100%; height: 160px; object-fit: cover; background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+  .item-card-body { padding: 1rem; }
+  .item-card-title { font-family: var(--font-head); font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+  .item-card-meta { font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; margin-right: 4px; }
+  .tag-lost { background: rgba(255,107,74,0.15); color: var(--danger); border: 1px solid rgba(255,107,74,0.3); }
+  .tag-found { background: rgba(0,200,150,0.12); color: var(--accent); border: 1px solid rgba(0,200,150,0.3); }
+  .tag-matched { background: rgba(74,158,255,0.12); color: var(--info); border: 1px solid rgba(74,158,255,0.3); }
+  .tag-ai { background: rgba(192,132,252,0.15); color: #C084FC; border: 1px solid rgba(192,132,252,0.3); margin-top: 5px; }
+  .match-score { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: 8px; }
+  .match-bar { flex: 1; height: 4px; background: var(--surface); border-radius: 99px; overflow: hidden; }
+  .match-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s; }
+
+  /* FORM */
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; max-width: 680px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 13px; font-weight: 500; color: var(--muted); }
+  input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font-body); font-size: 14px; padding: 10px 14px; width: 100%; transition: border 0.2s; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 90px; }
+  select option { background: var(--card); }
+
+  /* MAP */
+  #map { width: 100%; height: 500px; border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .map-legend { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* ROUTE PANEL */
+  .route-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .route-pair-cards { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: center; margin-top: 1rem; }
+  @media(max-width:600px){ .route-pair-cards { grid-template-columns: 1fr; } }
+  .route-item-card { background: var(--surface); border-radius: 10px; padding: 1rem; border: 1px solid var(--border); }
+  .route-item-card.lost-card { border-left: 3px solid var(--danger); }
+  .route-item-card.found-card { border-left: 3px solid var(--accent); }
+  .route-arrow { text-align: center; font-size: 1.5rem; color: var(--accent); }
+  .route-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+  .route-stat { background: var(--surface); border-radius: 8px; padding: 0.75rem 1rem; text-align: center; border: 1px solid var(--border); }
+  .route-stat-val { font-family: var(--font-head); font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+  .route-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .route-steps { margin-top: 1rem; }
+  .route-step-item { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px solid rgba(0,200,150,0.06); font-size: 13px; }
+  .route-step-item:last-child { border-bottom: none; }
+  .route-step-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.3); color: var(--accent); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+
+  /* NOTIFICATIONS */
+  .notif-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .notif-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: 1rem; }
+  .notif-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+  .notif-title { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .notif-sub { font-size: 13px; color: var(--muted); }
+  .notif-time { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .notif-unread { border-left: 3px solid var(--accent); }
+
+  /* MODAL OVERLAY */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .modal-title { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+
+  /* AI MATCH PANEL */
+  .ai-panel { background: linear-gradient(135deg, rgba(0,200,150,0.05), rgba(74,158,255,0.05)); border: 1px solid rgba(0,200,150,0.2); border-radius: var(--radius); padding: 1.25rem; margin-top: 1rem; }
+  .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.3); color: var(--accent); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+  .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+  /* CLAIM STEPS */
+  .steps { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+  .step { display: flex; gap: 1rem; align-items: flex-start; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,200,150,0.15); border: 1px solid rgba(0,200,150,0.4); color: var(--accent); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-content { flex: 1; }
+  .step-title { font-weight: 500; font-size: 14px; }
+  .step-desc { font-size: 13px; color: var(--muted); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 14px; z-index: 9999; display: none; animation: slideUp 0.3s ease; max-width: 320px; }
+  .toast.show { display: block; }
+  .toast.success { border-left: 3px solid var(--accent); }
+  .toast.error { border-left: 3px solid var(--danger); }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(0,200,150,0.06); }
+  .data-table tr:hover td { background: rgba(0,200,150,0.03); }
+
+  /* BLOCKCHAIN VIZ */
+  .chain { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 1rem 0; }
+  .chain-block { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 12px; flex-shrink: 0; min-width: 140px; }
+  .chain-block .hash { font-family: monospace; font-size: 10px; color: var(--muted); word-break: break-all; margin-top: 4px; }
+  .chain-arrow { color: var(--accent); padding: 0 4px; font-size: 1.1rem; flex-shrink: 0; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 4px; margin-bottom: 1.5rem; }
+  .tab { flex: 1; padding: 8px; border: none; background: none; color: var(--muted); font-family: var(--font-body); font-size: 13px; cursor: pointer; border-radius: 8px; transition: all 0.2s; }
+  .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+
+  /* UPLOAD ZONE */
+  .upload-zone { border: 2px dashed rgba(0,200,150,0.3); border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(0,200,150,0.03); }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .upload-label { font-size: 14px; color: var(--muted); }
+
+  /* PROGRESS */
+  .progress-bar { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 1s ease; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+
+  /* FUSION PAGE */
+  .fusion-hero { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+  .fusion-badge { font-size: 3rem; flex-shrink: 0; }
+  .fusion-hero-text h2 { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  .fusion-hero-text p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .signal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; transition: border 0.2s; }
+  .signal-card:hover { border-color: rgba(0,200,150,0.35); }
+  .signal-icon { font-size: 1.6rem; margin-bottom: 8px; }
+  .signal-name { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .signal-score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .signal-pct { font-family: var(--font-head); font-size: 1.5rem; font-weight: 800; }
+  .signal-weight { font-size: 12px; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); }
+  .signal-bar-wrap { height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+  .signal-bar-fill { height: 100%; border-radius: 99px; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+  .signal-desc { font-size: 12px; color: var(--muted); }
+  .fusion-result { background: var(--card); border: 2px solid rgba(0,200,150,0.35); border-radius: var(--radius); padding: 1.5rem 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+  .fusion-donut { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .fusion-donut svg { transform: rotate(-90deg); }
+  .donut-bg { fill: none; stroke: var(--surface); stroke-width: 14; }
+  .donut-fg { fill: none; stroke: var(--accent); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray 1.5s cubic-bezier(.4,0,.2,1); }
+  .donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .donut-pct { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .donut-sub { font-size: 11px; color: var(--muted); }
+  .fusion-detail h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .fusion-detail p { font-size: 13px; color: var(--muted); max-width: 360px; }
+  .fusion-formula { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-family: monospace; font-size: 13px; color: var(--accent); margin-top: 10px; display: inline-block; }
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 14px; }
+  .slider-row label { width: 130px; color: var(--muted); font-size: 13px; flex-shrink: 0; }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row .val { width: 40px; text-align: right; font-family: var(--font-head); font-weight: 700; font-size: 14px; color: var(--text); }
+  .confidence-level { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .conf-high { background: rgba(0,200,150,0.12); color: var(--accent); border: 1px solid rgba(0,200,150,0.3); }
+  .conf-mid  { background: rgba(255,184,74,0.12); color: var(--warning); border: 1px solid rgba(255,184,74,0.3); }
+  .conf-low  { background: rgba(255,107,74,0.12); color: var(--danger); border: 1px solid rgba(255,107,74,0.3); }
+  .item-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  @media(max-width:600px){ .item-compare { grid-template-columns: 1fr; } }
+  .compare-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .compare-card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .compare-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(0,200,150,0.06); }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-key { color: var(--muted); }
+  .compare-match { color: var(--accent); font-weight: 500; }
+  .compare-miss  { color: var(--danger); }
+
+  /* LEAFLET CUSTOM */
+  .leaflet-container { background: #0d1a14 !important; }
+  .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.7) saturate(0.8); }
+
+  /* LOGIN/OTP MODAL STYLES */
+  .otp-inputs { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
+  .otp-input { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); }
+  .otp-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,200,150,0.2); }
+
+  /* NODE STATUS ROW */
+  .node-status-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .node-metric-card {
+    background: linear-gradient(135deg, rgba(22, 30, 24, 0.6), rgba(10, 15, 13, 0.8));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  .node-metric-icon {
+    font-size: 1.8rem;
+    background: rgba(0, 200, 150, 0.1);
+    border: 1px solid rgba(0, 200, 150, 0.2);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .node-metric-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .node-metric-val {
+    font-family: var(--font-head);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .node-metric-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .node-pulse-indicator {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px var(--accent);
+    animation: nodePulse 1.8s infinite;
+  }
+  @keyframes nodePulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px var(--accent); }
+    100% { transform: scale(0.9); opacity: 0.6; }
+  }
+
+  /* LEDGER CHAIN SCROLLBAR & BLOCKS */
+  .chain-container {
+    position: relative;
+    background: rgba(17, 23, 18, 0.4);
+    border: 1px solid rgba(0, 200, 150, 0.1);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .chain-scroll {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    scroll-behavior: smooth;
+  }
+  .chain-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+  .chain-scroll::-webkit-scrollbar-track {
+    background: rgba(10, 15, 13, 0.5);
+    border-radius: 99px;
+  }
+  .chain-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 200, 150, 0.2);
+    border-radius: 99px;
+  }
+  .chain-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+  .chain-block-card {
+    background: linear-gradient(145deg, var(--card), rgba(17, 23, 18, 0.95));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 220px;
+    max-width: 220px;
+    flex-shrink: 0;
+    position: relative;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .chain-block-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 200, 150, 0.5);
+    box-shadow: 0 8px 25px rgba(0, 200, 150, 0.15);
+  }
+  .chain-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(0,200,150,0.1);
+    padding-bottom: 6px;
+  }
+  .chain-block-num {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .chain-block-tx {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chain-block-hash {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: rgba(10, 15, 13, 0.6);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,200,150,0.05);
+    margin-top: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chain-block-hash:hover {
+    color: var(--accent);
+    background: rgba(0, 200, 150, 0.05);
+  }
+  .chain-link-connector {
+    width: 32px;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(0, 200, 150, 0.5), rgba(0, 200, 150, 0.15) 50%, rgba(0, 200, 150, 0.5));
+    position: relative;
+    flex-shrink: 0;
+    border-radius: 99px;
+  }
+  .chain-link-connector::after {
+    content: '🔗';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    font-size: 12px;
+    background: var(--bg);
+    padding: 2px;
+    border-radius: 50%;
+    animation: connectorPulse 2.2s infinite ease-in-out;
+  }
+  @keyframes connectorPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.75); filter: drop-shadow(0 0 2px var(--accent)); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(0.95); filter: drop-shadow(0 0 6px var(--accent)); opacity: 1; }
+  }
+  .block-newly-mined {
+    animation: blockMine 2.2s ease-out forwards;
+    border-color: var(--accent) !important;
+  }
+  @keyframes blockMine {
+    0% { transform: scale(0.6) translateY(20px); opacity: 0; filter: brightness(2); box-shadow: 0 0 40px var(--accent); }
+    30% { transform: scale(1.05) translateY(-5px); opacity: 0.9; filter: brightness(1.5); box-shadow: 0 0 30px var(--accent); }
+    100% { transform: scale(1) translateY(0); opacity: 1; filter: brightness(1); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  }
+
+  /* PREMIUM TABLE & EMPTY STATE */
+  .quorum-table-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  .review-btn {
+    background: rgba(0, 200, 150, 0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0, 200, 150, 0.3);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .review-btn:hover {
+    background: var(--accent);
+    color: #0A0F0D;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(0, 200, 150, 0.3);
+  }
+  .empty-state-shield {
+    text-align: center;
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .empty-state-icon {
+    font-size: 3rem;
+    color: var(--accent);
+    animation: shieldGlow 2s infinite ease-in-out;
+  }
+  @keyframes shieldGlow {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(0,200,150,0.2)); }
+    50% { filter: drop-shadow(0 0 15px rgba(0,200,150,0.6)); }
+  }
+
+  /* VALIDATOR REVIEW LAYOUT */
+  .review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(max-width: 768px) {
+    .review-grid { grid-template-columns: 1fr; }
+  }
+  .review-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+  }
+  .review-title {
+    font-family: var(--font-head);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0,200,150,0.15);
+    padding-bottom: 6px;
+  }
+  .review-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(232, 240, 235, 0.05);
+  }
+  .review-row:last-child {
+    border-bottom: none;
+  }
+  .review-key {
+    color: var(--muted);
+  }
+  .review-val {
+    color: var(--text);
+    font-weight: 500;
+    text-align: right;
+    max-width: 60%;
+  }
+  
+  /* MINING PIPELINE ANIMATION OVERLAY */
+  .mining-pipeline-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .mining-spinner {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px dashed var(--border);
+    border-top: 3px solid var(--accent);
+    border-bottom: 3px solid var(--accent2);
+    animation: mineSpin 1.8s linear infinite;
+    margin-bottom: 1.5rem;
+  }
+  @keyframes mineSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .mining-log-box {
+    background: rgba(10, 15, 13, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 10px;
+    text-align: left;
+    margin: 1rem 0;
+    line-height: 1.5;
+  }
+  .mining-log-entry {
+    color: var(--text);
+  }
+  .mining-log-success {
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">CARN<span>.</span></div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="goPage('home')">Home</button>
+    <button class="nav-btn" onclick="goPage('browse')">Browse Items</button>
+    <button class="nav-btn" onclick="goPage('map')">📍 Live Map</button>
+    <button class="nav-btn" onclick="goPage('verify')">Verify</button>
+    <button class="nav-btn" onclick="goPage('notifs')">🔔 Alerts</button>
+    <button class="nav-btn" onclick="goPage('fusion')">🧠 AI Fusion</button>
+  </div>
+  <div style="display: flex; align-items: center;">
+    <button class="nav-btn" onclick="clearDatabase()" style="font-size: 12px; padding: 4px 10px; border: 1px solid rgba(255,107,74,0.3); color: var(--danger); margin-right: 10px;">🧹 Clear DB</button>
+    <button class="nav-cta-outline" id="loginBtn" onclick="openModal('loginModal')">🔒 Login</button>
+    <div class="nav-user" id="userNavGroup">
+      <span style="font-size: 14px; font-weight:600; color:var(--text)">👤 <span id="navUserName"></span></span>
+      <button class="nav-btn" onclick="logout()" style="font-size: 12px; padding: 4px 10px; border: 1px solid var(--border);">🚪 Logout</button>
+    </div>
+    <button class="nav-cta" onclick="handleReportClick()">+ Report Item</button>
+  </div>
+</nav>
+
+<div id="home" class="page active">
+  <div class="hero">
+    <div class="hero-badge">🌐 Civic Asset Recovery Network</div>
+    <h1>Find What's <span class="hl">Lost.</span><br/>Return What's <span class="hl">Found.</span></h1>
+    <p>AI-powered matching connects lost items to their owners instantly — across your city, verified on the blockchain.</p>
+    <div class="hero-actions">
+      <button class="btn btn-danger" onclick="handleReportClick('lost')">🔴 Report Lost Item</button>
+      <button class="btn btn-primary" onclick="handleReportClick('found')">🟢 Report Found Item</button>
+      <button class="btn btn-outline" onclick="goPage('map')">📍 View Live Map</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-num" id="s1">0</div><div class="stat-label">Items Reported</div></div>
+    <div class="stat-card"><div class="stat-num" id="s2">0</div><div class="stat-label">Matches Found</div></div>
+    <div class="stat-card"><div class="stat-num" id="s3">0</div><div class="stat-label">Items Returned</div></div>
+    <div class="stat-card"><div class="stat-num" id="s4">0%</div><div class="stat-label">Recovery Rate</div></div>
+  </div>
+
+  <div class="section-title">How It <span>Works</span></div>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Report your item</div><div class="step-desc">Submit details and a photo of your lost or found item. The more details, the better the match.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">AI matching engine runs</div><div class="step-desc">Our multimodal AI compares image features, text descriptions, location & time to find the best matches.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Secure claim with verification</div><div class="step-desc">Claimants answer item-specific questions only the true owner would know. Every step recorded on-chain.</div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Route tracked to pickup point</div><div class="step-desc">The Live Map shows routes between the owner and finder — guiding both to the nearest civic drop point.</div></div></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title" style="margin-top:1.5rem">Recent <span>Activity</span></div>
+  <div id="recentCards" class="cards-grid"></div>
+</div>
+
+<div id="browse" class="page">
+  <div class="section-title">Browse <span>All Items</span></div>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center">
+    <input type="text" placeholder="Search by name, category…" id="searchInput" oninput="renderBrowse()" style="max-width:260px" />
+    <select id="filterType" onchange="renderBrowse()" style="max-width:160px">
+      <option value="">All Types</option>
+      <option value="lost">Lost</option>
+      <option value="found">Found</option>
+      <option value="matched">Matched</option>
+    </select>
+    <select id="filterCat" onchange="renderBrowse()" style="max-width:180px">
+      <option value="">All Categories</option>
+      <option>Electronics</option>
+      <option>Bags &amp; Wallets</option>
+      <option>Keys</option>
+      <option>Clothing</option>
+      <option>Jewellery</option>
+      <option>Documents</option>
+      <option>Pets</option>
+      <option>Other</option>
+    </select>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="setTab(this,'all')">All Items</button>
+    <button class="tab" onclick="setTab(this,'high')">High Match</button>
+    <button class="tab" onclick="setTab(this,'new')">Newly Added</button>
+  </div>
+  <div id="browseGrid" class="cards-grid"></div>
+</div>
+
+<div id="map-page" class="page">
+  <div class="section-title">Live <span>Map</span> & Route Tracker</div>
+
+  <div class="route-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Select a matched pair to show route</div>
+        <select id="matchPairSelect" onchange="loadMatchRoute()" style="font-size:14px;width:100%">
+          <option value="">— Pick a verified match pair to track route —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+        <div id="matchBadge" style="display:none"><div class="ai-badge"><div class="pulse"></div> Route Active</div></div>
+        <button class="btn btn-outline" onclick="clearRoute()" style="font-size:13px;padding:8px 14px">Clear Route</button>
+        <button class="btn btn-info" onclick="showAllPins()" style="font-size:13px;padding:8px 14px">Show All Pins</button>
+      </div>
+    </div>
+
+    <div id="pairInfo" style="display:none">
+      <div class="route-pair-cards" style="margin-top:1rem">
+        <div class="route-item-card lost-card" id="routeLostCard">
+          <div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🔴 Lost Item Location</div>
+          <div id="routeLostName" style="font-weight:600;font-size:14px"></div>
+          <div id="routeLostLoc" style="font-size:12px;color:var(--muted);margin-top:3px"></div>
+          <div id="routeLostScore" style="margin-top:6px"></div>
+        </div>
+        <div class="route-arrow">⟷</div>
+        <div class="route-item-card found-card" id="routeFoundCard">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🟢 Found Item Location</div>
+          <div id="routeFoundName" style="font-weight:600;font-size:14px"></div>
+          <div id="routeFoundLoc" style="font-size:12px;color:var(--muted);margin-top:3px"></div>
+          <div id="routeFoundScore" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="route-stat-row" id="routeStats"></div>
+
+      <div style="margin-top:1rem">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📋 Suggested Route Steps</div>
+        <div id="routeSteps" class="route-steps"></div>
+      </div>
+
+      <div id="civicSuggestion" style="margin-top:1rem;background:rgba(74,158,255,0.07);border:1px solid rgba(74,158,255,0.25);border-radius:10px;padding:1rem;font-size:13px">
+        <div style="font-weight:600;color:var(--info);margin-bottom:4px">🏛 Nearest Civic Drop Point (Meetup)</div>
+        <div id="civicName" style="color:var(--text)"></div>
+        <div id="civicAddr" style="color:var(--muted);font-size:12px;margin-top:2px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="map-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div> Lost Item Location</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Found Item Location</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--info)"></div> Matched</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--warning)"></div> Civic Drop Point</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#C084FC;border-radius:2px;width:20px;height:6px"></div> Route Line</div>
+  </div>
+</div>
+
+<div id="verify" class="page">
+  <div class="section-title">Decentralised <span>Verification</span></div>
+  <p style="color:var(--muted);margin-bottom:1.5rem;font-size:14px">Review high-value asset claims as a trusted node. Cast your consensus vote to verify ownership authenticity.</p>
+  
+  <!-- Node Status Dashboard Row -->
+  <div class="node-status-row">
+    <div class="node-metric-card">
+      <div class="node-metric-icon">🟢</div>
+      <div class="node-metric-info">
+        <div class="node-metric-val" style="display:flex;align-items:center;gap:6px;">
+          <span>99.98%</span>
+          <span class="node-pulse-indicator"></span>
+        </div>
+        <div class="node-metric-lbl">Quorum Health</div>
+      </div>
+    </div>
+    <div class="node-metric-card">
+      <div class="node-metric-icon">⛓️</div>
+      <div class="node-metric-info">
+        <div class="node-metric-val" id="metricsBlockHeight">#1041</div>
+        <div class="node-metric-lbl">Quorum Height</div>
+      </div>
+    </div>
+    <div class="node-metric-card">
+      <div class="node-metric-icon">🛡️</div>
+      <div class="node-metric-info">
+        <div class="node-metric-val">32 Active</div>
+        <div class="node-metric-lbl">Consensus Nodes</div>
+      </div>
+    </div>
+    <div class="node-metric-card">
+      <div class="node-metric-icon">⭐</div>
+      <div class="node-metric-info">
+        <div class="node-metric-val">99.9%</div>
+        <div class="node-metric-lbl">Validator Trust</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title" style="font-size:1.1rem;margin-bottom:0.25rem;display:flex;align-items:center;gap:8px;">
+    <span>🔗</span> Verified Transaction Ledger
+  </div>
+  <p style="color:var(--muted); font-size:12.5px; margin-bottom:1.25rem;">A real-time, tamper-proof history of successful match resolutions recorded across local network nodes.</p>
+  <div class="chain-container">
+    <div class="chain-scroll" id="chainView">
+      <!-- Mined ledger blocks rendered dynamically -->
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title" style="font-size:1.1rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px;">
+    <span>🗳️</span> Pending Quorum Validations
+  </div>
+  <div class="quorum-table-container" id="quorumTableWrapper">
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Claim ID</th>
+            <th>Item Pair</th>
+            <th>Confidence</th>
+            <th>Current Status</th>
+            <th>Timestamp</th>
+            <th style="text-align:right;">Consensus Action</th>
+          </tr>
+        </thead>
+        <tbody id="claimTable">
+          <!-- Pending claims rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="notifs" class="page">
+  <div class="section-title">Alerts &amp; <span>Notifications</span></div>
+  <div id="notifList" class="notif-list"></div>
+</div>
+
+<div id="fusion" class="page">
+  <div class="fusion-hero">
+    <div class="fusion-badge">🧠</div>
+    <div class="fusion-hero-text">
+      <h2>Multi-modal Fusion Engine</h2>
+      <p>Instead of matching on one signal alone, CARN combines image, text, location, time and metadata — weighted and fused into a single confidence score.</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:1rem">Select a <span>Match Pair</span> to Analyze</div>
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:center; justify-content:space-between; width:100%;">
+    <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; flex:1;">
+      <select id="fusionPairSelect" onchange="loadFusionPair()" style="max-width:320px; font-size:14px; padding:8px 12px; margin-right:10px;">
+        <option value="">— Select a Match Pair —</option>
+      </select>
+      <button class="btn btn-primary" id="runOllamaBtn" onclick="runOllamaFusion()" style="font-size:13.5px; padding:8px 16px; display:none;">🤖 Run Ollama AI Fusion Analysis</button>
+    </div>
+    
+    <!-- Ollama Settings Panel -->
+    <div style="background: rgba(22,30,24,0.65); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span id="ollamaStatusDot" style="width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: inline-block;"></span>
+        <span id="ollamaStatusText" style="font-size: 11.5px; font-weight: 700; color: var(--muted);">Ollama Offline</span>
+      </div>
+      <input type="text" id="ollamaUrl" value="http://localhost:11434" placeholder="Ollama URL" style="font-size: 11.5px; padding: 6px 10px; max-width: 140px; margin: 0; background: var(--surface);" onchange="checkOllamaConnection()" />
+      <!-- Hidden Select to keep JS fully compatible -->
+      <select id="ollamaModelSelect" style="display: none;">
+        <option value="llama3.2:1b" selected>llama3.2:1b</option>
+      </select>
+      <!-- Premium visible badge -->
+      <div style="font-size: 11px; font-weight: 700; background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.3); color: var(--accent); padding: 5px 12px; border-radius: 6px; font-family: monospace; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
+        🤖 Model: llama3.2:1b
+      </div>
+      <button class="btn btn-outline" onclick="checkOllamaConnection()" style="font-size: 11px; padding: 6px 12px; margin: 0;">🔄 Connect</button>
+    </div>
+  </div>
+
+  <div class="item-compare" id="fusionComparePanel">
+    <div class="compare-card" id="fusionLostCard">
+      <!-- Dynamically Populated -->
+    </div>
+    <div class="compare-card" id="fusionFoundCard">
+      <!-- Dynamically Populated -->
+    </div>
+  </div>
+
+  <!-- Ollama Analysis Logs (Terminal Style) -->
+  <div id="ollamaLoaderPanel" style="display:none; background:rgba(10,15,13,0.9); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin-bottom:1.5rem;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <div class="pulse" style="background:var(--accent);"></div>
+      <span style="font-family:var(--font-head); font-weight:700; font-size:13.5px; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent);">Active LLM Fusion Pipeline</span>
+    </div>
+    <div class="progress-bar" style="width:100%; height:4px; margin-bottom:12px;"><div class="progress-fill" id="ollamaProgressBar" style="width:0%; background:var(--accent);"></div></div>
+    <div class="mining-log-box" id="ollamaLogs" style="margin:0; max-height:150px;"></div>
+  </div>
+
+  <!-- Ollama Cognitive Insight Card -->
+  <div id="ollamaInsightCard" style="display:none; background:linear-gradient(135deg, rgba(0,200,150,0.06), rgba(192,132,252,0.06)); border:1px solid rgba(192,132,252,0.3); border-radius:var(--radius); padding:1.5rem 2rem; margin-bottom:1.5rem; box-shadow:0 4px 20px rgba(192,132,252,0.15);">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.8rem;">🤖</span>
+        <div>
+          <h3 style="font-family:var(--font-head); font-size:1.15rem; font-weight:700; color:var(--text);" id="insightTitle">Ollama Cognitive Auditing Insights</h3>
+          <p style="font-size:11.5px; color:var(--muted);" id="insightModelInfo">Powered by llama3 local execution</p>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="adoptWeightsBtn" onclick="adoptLLMWeights()" style="font-size:12px; padding:6px 14px;">🧠 Adopt Recommended Weights</button>
+    </div>
+    <p id="insightText" style="font-size:13.5px; color:var(--text); line-height:1.6; margin-bottom:1rem; border-left:3px solid var(--accent); padding-left:12px; font-style:italic;"></p>
+    
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; font-size:12px; background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+      <div><strong style="color:var(--muted);">Image Sim:</strong> <span style="font-family:monospace; color:var(--accent); font-weight:bold;" id="insightImg">--</span></div>
+      <div><strong style="color:var(--muted);">Text Cosine:</strong> <span style="font-family:monospace; color:var(--info); font-weight:bold;" id="insightTxt">--</span></div>
+      <div><strong style="color:var(--muted);">Loc Proximity:</strong> <span style="font-family:monospace; color:var(--warning); font-weight:bold;" id="insightLoc">--</span></div>
+      <div><strong style="color:var(--muted);">Time Decays:</strong> <span style="font-family:monospace; color:#C084FC; font-weight:bold;" id="insightTime">--</span></div>
+      <div><strong style="color:var(--muted);">Meta Overlap:</strong> <span style="font-family:monospace; color:var(--danger); font-weight:bold;" id="insightMeta">--</span></div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:1rem">Signal <span>Breakdown</span></div>
+  <div class="signal-grid" id="signalGrid"></div>
+
+  <div class="section-title" style="margin-bottom:1rem">Fused <span>Confidence Score</span></div>
+  <div class="fusion-result">
+    <div class="fusion-donut">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle class="donut-bg" cx="60" cy="60" r="48"/>
+        <circle class="donut-fg" id="donutFg" cx="60" cy="60" r="48" stroke-dasharray="0 302"/>
+      </svg>
+      <div class="donut-label">
+        <div class="donut-pct" id="donutPct">0%</div>
+        <div class="donut-sub">confidence</div>
+      </div>
+    </div>
+    <div class="fusion-detail">
+      <h3 id="fusionVerdict">Calculating…</h3>
+      <p id="fusionExplain" style="color:var(--muted);font-size:13px">Weighted signals are being fused together.</p>
+      <div class="fusion-formula" id="fusionFormula">Final = Σ(signal × weight)</div>
+      <div id="fusionLevel"></div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:1rem">Tune <span>Signal Weights</span></div>
+  <div class="form-card" style="max-width:100%">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:1.2rem">Drag each slider to change how much each signal contributes. The final score updates live. Weights auto-normalise to 100%.</p>
+    <div id="weightSliders"></div>
+    <div class="divider" style="margin:1rem 0"></div>
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <span style="font-size:14px;color:var(--muted)">Recalculated confidence:</span>
+      <span style="font-family:var(--font-head);font-size:1.8rem;font-weight:800;color:var(--accent)" id="liveScore">91%</span>
+      <div id="liveBadge"></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title" style="margin-bottom:1rem">How the <span>Formula Works</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:2rem">
+    <div class="signal-card"><div class="signal-icon">🖼️</div><div class="signal-name">Image similarity</div><div style="font-size:13px;color:var(--muted)">AI compares visual features — shape, colour histogram, edge patterns — using a CNN embedding model. Two identical items score 100%; different objects score near 0%.</div></div>
+    <div class="signal-card"><div class="signal-icon">📝</div><div class="signal-name">Text / NLP similarity</div><div style="font-size:13px;color:var(--muted)">Descriptions are converted to sentence embeddings. Cosine similarity measures how semantically close "black phone with cracked screen" is to "dark smartphone".</div></div>
+    <div class="signal-card"><div class="signal-icon">📍</div><div class="signal-name">Location proximity</div><div style="font-size:13px;color:var(--muted)">Haversine distance between GPS coordinates. Items within 500m score ~100%; score decays exponentially — at 5 km it's ~40%, at 20 km it's ~5%.</div></div>
+    <div class="signal-card"><div class="signal-icon">⏱️</div><div class="signal-name">Time proximity</div><div style="font-size:13px;color:var(--muted)">Difference between lost and found timestamps. Same day = high score. Score drops over days. A 2-hour gap scores higher than a 2-week gap.</div></div>
+    <div class="signal-card"><div class="signal-icon">🏷️</div><div class="signal-name">Metadata match</div><div style="font-size:13px;color:var(--muted)">Category, colour, brand, and size are structured fields. Exact category match gives a bonus. Colour mismatch applies a penalty to the final score.</div></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="loginModal">
+  <div class="modal" style="max-width: 400px; text-align: center;">
+    <div class="modal-header">
+      <div class="modal-title">Secure Login</div>
+      <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    </div>
+    
+    <div id="loginStep1">
+      <p style="color:var(--muted); font-size:14px; margin-bottom:1rem;">Enter your name and verified municipal phone number to login or register.</p>
+      <div class="form-group" style="text-align: left; margin-bottom:1rem;">
+        <label>Full Name</label>
+        <input type="text" id="loginName" placeholder="Your Name" />
+      </div>
+      <div class="form-group" style="text-align: left; margin-bottom:1.5rem;">
+        <label>Phone Number</label>
+        <input type="tel" id="loginPhone" placeholder="+91 98765 43210" />
+      </div>
+      <button class="btn btn-primary" style="width: 100%" onclick="sendOTP()">Send OTP Code</button>
+    </div>
+
+    <div id="loginStep2" style="display:none;">
+      <p style="color:var(--muted); font-size:14px; margin-bottom:1rem;">Enter the 4-digit code sent to <span id="displayPhone" style="color:var(--text); font-weight:600;"></span>.</p>
+      <div class="otp-inputs">
+        <input type="text" maxlength="1" class="otp-input" oninput="moveNext(this, 'otp2')" id="otp1" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moveNext(this, 'otp3')" id="otp2" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moveNext(this, 'otp4')" id="otp3" />
+        <input type="text" maxlength="1" class="otp-input" id="otp4" />
+      </div>
+      <button class="btn btn-primary" style="width: 100%; margin-top:1rem;" onclick="verifyOTP()">Verify OTP</button>
+      <button class="btn btn-outline" style="width: 100%; margin-top:0.5rem; border:none;" onclick="resetLogin()">Back</button>
+    </div>
+  </div>
+</div>
